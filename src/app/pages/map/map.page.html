@@ -1,0 +1,52 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>ルートマップ</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="fitRoute()">
+        <ion-icon slot="icon-only" name="scan-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [value]="layer()" (ionChange)="onLayerChange($event)">
+      <ion-segment-button value="stops">
+        <ion-label>滞在地</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="lodgings">
+        <ion-label>宿</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [scrollY]="false">
+  <div class="map-wrap">
+    <div #mapEl class="map"></div>
+  </div>
+
+  @if (selected(); as sel) {
+    <ion-card class="info-card">
+      <ion-card-header>
+        <ion-card-subtitle>{{ sel.subtitle }}</ion-card-subtitle>
+        <ion-card-title>{{ sel.title }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ sel.note }}</p>
+        <div class="info-actions">
+          <ion-button size="small" fill="outline" (click)="openDirections(sel)">
+            <ion-icon slot="start" name="navigate-outline"></ion-icon>
+            経路
+          </ion-button>
+          @if (sel.stopId) {
+            <ion-button size="small" fill="clear" [routerLink]="['/stop', sel.stopId]">
+              詳細
+            </ion-button>
+          }
+          <ion-button size="small" fill="clear" color="medium" (click)="selected.set(null)">
+            閉じる
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

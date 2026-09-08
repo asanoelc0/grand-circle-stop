@@ -1,0 +1,87 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>グランドサークル 宿リスト</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">宿リスト</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <div class="summary">
+    <ion-chip color="primary" outline="true">
+      <ion-icon name="car-outline"></ion-icon>
+      <ion-label>約 {{ trip.totalKm }} km</ion-label>
+    </ion-chip>
+    <ion-chip color="primary" outline="true">
+      <ion-icon name="moon-outline"></ion-icon>
+      <ion-label>{{ trip.totalNights }} 泊</ion-label>
+    </ion-chip>
+    <ion-chip color="primary" outline="true">
+      <ion-icon name="location-outline"></ion-icon>
+      <ion-label>{{ trip.stops.length }} スポット</ion-label>
+    </ion-chip>
+  </div>
+
+  @for (stop of trip.stops; track stop.id) {
+    @if (stop.legFromPrev) {
+      <div class="leg">
+        <ion-icon name="arrow-down-outline"></ion-icon>
+        <span>約 {{ stop.legFromPrev.km }} km / {{ stop.legFromPrev.hours }} 時間</span>
+      </div>
+    }
+
+    <ion-card class="stop-card">
+      <ion-card-header>
+        <div class="stop-head">
+          <div class="order" [class.via]="stop.kind === 'via'">{{ stop.order }}</div>
+          <div class="titles">
+            <ion-card-title>{{ stop.name }}</ion-card-title>
+            <ion-card-subtitle>{{ stop.nameEn }}</ion-card-subtitle>
+          </div>
+          <ion-badge [color]="stop.kind === 'stay' ? 'primary' : 'medium'">
+            {{ stop.kind === 'stay' ? stop.nights + '泊' : '経由' }}
+          </ion-badge>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <ul class="highlights">
+          @for (h of stop.highlights; track h) {
+            <li>{{ h }}</li>
+          }
+        </ul>
+
+        <ion-list lines="full" class="lodging-list">
+          @for (lodging of stop.lodgings; track lodging.name) {
+            <ion-item [button]="true" [detail]="false" (click)="openLodging(lodging)">
+              <ion-label class="ion-text-wrap">
+                <h3>{{ lodging.name }}</h3>
+                <p>{{ lodging.type }} ・ {{ lodging.price }}</p>
+                <p class="note">{{ lodging.note }}</p>
+              </ion-label>
+            </ion-item>
+          }
+        </ion-list>
+
+        <div class="actions">
+          <ion-button size="small" fill="outline" (click)="showOnMap(stop)">
+            <ion-icon slot="start" name="map-outline"></ion-icon>
+            地図で見る
+          </ion-button>
+          <ion-button size="small" fill="clear" [routerLink]="['/stop', stop.id]">
+            詳細
+            <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <p class="disclaimer">
+    料金帯・営業期間・入園予約の要否はシーズンで変わります。予約前に各公式サイトで最新情報を確認してください。
+  </p>
+</ion-content>

@@ -1,0 +1,28 @@
+/* Ionic core */
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/display.css';
+
+@import '@ionic/angular/css/padding.css';
+@import '@ionic/angular/css/flex-utils.css';
+@import '@ionic/angular/css/text-alignment.css';
+
+/* ダークモードは端末設定に追従 */
+@import '@ionic/angular/css/palettes/dark.system.css';
+
+/* Leaflet */
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  --gcs-canyon: #c1440e;
+  --gcs-sand: #e0a458;
+  --gcs-sky: #2a6f97;
+  --ion-color-primary: #c1440e;
+  --ion-color-primary-rgb: 193, 68, 14;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #aa3c0c;
+  --ion-color-primary-tint: #c75726;
+}
