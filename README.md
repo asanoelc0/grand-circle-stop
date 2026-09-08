@@ -38,3 +38,25 @@ Capacitor でネイティブ化する場合は `npm i @capacitor/core @capacitor
 
 滞在地・宿のデータは [`src/app/data/stops.data.ts`](src/app/data/stops.data.ts) にまとまっている。宿を足す・入れ替えるときはここを編集する。
 料金帯（$ / $$ / $$$）はおおよその目安、座標は施設のおおよその位置。営業期間・入園予約の要否はシーズンで変わるので、予約前に各公式サイトで確認すること。
+
+## 公開（無料ホスティング）
+
+バックエンドを持たない静的サイトなので、無料枠のホスティングでそのまま動く。
+
+### GitHub Pages（設定済み）
+
+`main` へのプッシュで `.github/workflows/deploy.yml` がビルドして公開する。
+初回だけリポジトリの **Settings → Pages → Source** を **GitHub Actions** に切り替える必要がある。
+
+公開URL: `https://asanoelc0.github.io/grand-circle-stop/`
+
+サブパス配信になるので、ビルドは `npm run build:pages`（`--base-href /grand-circle-stop/` 付き）を使う。
+ワークフローでは `index.html` を `404.html` にコピーして、`/stop/bryce` のような直リンクでも SPA に戻るようにしている。
+
+### 他の無料枠を使う場合
+
+Cloudflare Pages / Netlify / Vercel なら独自ドメイン直下に置けるので `--base-href` は不要。
+
+- ビルドコマンド: `npm run build`
+- 公開ディレクトリ: `dist/gcs/browser`
+- SPA フォールバック: `/*` → `/index.html`（Netlify なら `_redirects` に `/* /index.html 200`）
