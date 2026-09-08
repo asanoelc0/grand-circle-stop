@@ -1,0 +1,60 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/list" text="戻る"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ stop()?.name ?? '滞在地' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  @if (stop(); as s) {
+    <div class="hero">
+      <h1>{{ s.name }}</h1>
+      <p>{{ s.nameEn }}</p>
+      <div class="chips">
+        <ion-chip color="light">{{ s.kind === 'stay' ? s.nights + '泊' : '経由（宿泊なし）' }}</ion-chip>
+        @if (s.legFromPrev) {
+          <ion-chip color="light">前地点から {{ s.legFromPrev.km }} km / {{ s.legFromPrev.hours }} h</ion-chip>
+        }
+      </div>
+    </div>
+
+    <ion-list inset="true">
+      <ion-list-header>ここでやること</ion-list-header>
+      @for (h of s.highlights; track h) {
+        <ion-item lines="full">
+          <ion-icon slot="start" name="ellipse-outline" color="primary" size="small"></ion-icon>
+          <ion-label class="ion-text-wrap">{{ h }}</ion-label>
+        </ion-item>
+      }
+    </ion-list>
+
+    <ion-list inset="true">
+      <ion-list-header>宿の候補</ion-list-header>
+      @for (lodging of s.lodgings; track lodging.name) {
+        <ion-item lines="full">
+          <ion-label class="ion-text-wrap">
+            <h3>{{ lodging.name }}</h3>
+            <p>{{ lodging.type }} ・ {{ lodging.price }}</p>
+            <p>{{ lodging.note }}</p>
+            <div class="links">
+              <ion-button size="small" fill="outline" (click)="open(trip.searchUrl(lodging))">
+                <ion-icon slot="start" name="location-outline"></ion-icon>
+                地図
+              </ion-button>
+              @if (lodging.url) {
+                <ion-button size="small" fill="clear" (click)="open(lodging.url!)">
+                  <ion-icon slot="start" name="open-outline"></ion-icon>
+                  公式
+                </ion-button>
+              }
+            </div>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  } @else {
+    <p class="ion-padding">見つかりませんでした。</p>
+  }
+</ion-content>

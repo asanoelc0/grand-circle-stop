@@ -1,0 +1,29 @@
+.hero {
+  padding: 20px 20px 12px;
+  background: linear-gradient(135deg, var(--gcs-canyon) 0%, var(--gcs-sand) 100%);
+  color: #fff;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 2px 0 8px;
+    opacity: 0.85;
+    font-size: 13px;
+  }
+}
+
+.chips ion-chip {
+  --background: rgb(255 255 255 / 22%);
+  --color: #fff;
+  font-size: 12px;
+}
+
+.links {
+  display: flex;
+  gap: 4px;
+  padding-top: 4px;
+}
