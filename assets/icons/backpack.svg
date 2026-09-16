@@ -1,23 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="backpackTitle backpackDesc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 200" width="128" height="200" role="img" aria-labelledby="backpackTitle backpackDesc">
   <title id="backpackTitle">リュックサック</title>
-  <desc id="backpackDesc">トップハンドルとバックルが付いたリュックサック</desc>
-  <g fill="none" stroke="var(--bag-ink, #3f3228)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-    <!-- shoulder straps (behind the body, peeking out at both sides) -->
-    <path d="M44 48C20 58 14 82 26 102" stroke-width="8" stroke="var(--bag-shade, #b5792f)"/>
-    <path d="M84 48c24 10 30 34 18 54" stroke-width="8" stroke="var(--bag-shade, #b5792f)"/>
-    <path d="M44 48C20 58 14 82 26 102M84 48c24 10 30 34 18 54"/>
-    <!-- grab handle -->
-    <path d="M54 40c0-7 4-11 10-11s10 4 10 11" stroke-width="4"/>
+  <desc id="backpackDesc">幅32cm・高さ50cm相当の25L前後のデイパック。トップリッド、フロントポケット、肩ベルト付き</desc>
+  <g fill="none" stroke="var(--bag-ink, #3f3228)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- shoulder straps behind the body -->
+    <path d="M44 48C16 64 8 108 20 146" stroke-width="13" stroke="var(--bag-shade, #b5792f)"/>
+    <path d="M84 48c28 16 36 60 24 98" stroke-width="13" stroke="var(--bag-shade, #b5792f)"/>
+    <path d="M44 48C16 64 8 108 20 146M84 48c28 16 36 60 24 98" stroke-width="3.4"/>
+    <!-- haul loop -->
+    <path d="M52 40c0-9 5-14 12-14s12 5 12 14" stroke-width="5"/>
+
     <!-- body -->
-    <path d="M28 68c0-16 16-30 36-30s36 14 36 30v28a14 14 0 0 1-14 14H42a14 14 0 0 1-14-14z" fill="var(--bag-base, #e0a34f)"/>
-    <!-- top flap -->
-    <path d="M28 68c0-16 16-30 36-30s36 14 36 30v4a10 10 0 0 1-10 10H38a10 10 0 0 1-10-10z" fill="var(--bag-shade, #cf8f3c)"/>
-    <!-- flap buckles -->
-    <path d="M52 80v10M76 80v10" stroke-width="5"/>
-    <rect x="47" y="86" width="10" height="9" rx="2.5" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
-    <rect x="71" y="86" width="10" height="9" rx="2.5" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
+    <path d="M14 78c0-27 22-46 50-46s50 19 50 46v82a20 20 0 0 1-20 20H34a20 20 0 0 1-20-20z" fill="var(--bag-base, #e0a34f)"/>
+    <!-- bottom panel -->
+    <path d="M14 152v8a20 20 0 0 0 20 20h60a20 20 0 0 0 20-20v-8z" fill="var(--bag-shade, #cf8f3c)" stroke="none"/>
+    <path d="M14 152h100" stroke-width="3"/>
+    <!-- top lid -->
+    <path d="M14 80c0-27 22-48 50-48s50 21 50 48v6a12 12 0 0 1-12 12H26a12 12 0 0 1-12-12z" fill="var(--bag-shade, #cf8f3c)"/>
+    <path d="M22 88h84" stroke-width="2.6" opacity=".5"/>
+    <!-- lid zipper -->
+    <path d="M24 62c10-14 24-21 40-21s30 7 40 21" stroke-width="3" stroke-dasharray="1 7" opacity=".75"/>
+    <circle cx="104" cy="62" r="4.5" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
     <!-- front pocket -->
-    <path d="M44 110v-6a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v6" fill="var(--bag-accent, #f6e2bb)"/>
-    <path d="M48 98h32" stroke-width="2.4" opacity=".6"/>
+    <path d="M34 148v-24c0-9 7-16 16-16h28c9 0 16 7 16 16v24z" fill="var(--bag-accent, #f6e2bb)"/>
+    <path d="M38 122c6-6 15-9 26-9s20 3 26 9" stroke-width="3" stroke-dasharray="1 7" opacity=".8"/>
+    <circle cx="90" cy="122" r="4.5" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
+    <!-- compression straps with buckles -->
+    <path d="M42 98v18M86 98v18" stroke-width="6"/>
+    <rect x="36" y="112" width="12" height="11" rx="3" fill="var(--bag-metal, #f4efe4)" stroke-width="3"/>
+    <rect x="80" y="112" width="12" height="11" rx="3" fill="var(--bag-metal, #f4efe4)" stroke-width="3"/>
+    <!-- side webbing -->
+    <path d="M14 132h8M114 132h-8" stroke-width="3"/>
   </g>
 </svg>

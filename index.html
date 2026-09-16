@@ -6,52 +6,73 @@
 <title>Packing Bags</title>
 <style>
   :root{
-    --wall:#f4ece0; --wall-2:#e9dcca; --floor:#d8c3a5; --floor-2:#c9b091;
-    --ink:#3f3228; --ink-soft:#6f6152; --card:#fffaf2; --line:#e0d2bd;
-    --shadow:rgba(63,50,40,.16);
+    --wall:#f4ece0; --floor:#d8c3a5; --floor-2:#c9b091;
+    --ink:#3f3228; --ink-soft:#756656; --card:#fffaf2; --card-sub:#f6ede0; --line:#e0d2bd;
+    --shadow:rgba(63,50,40,.18);
+    /* 1cm = 2.2px。3つのアイコンで共通なので実寸比がそのまま出る */
+    --cm:2.2px;
   }
-  :root:not([data-theme="light"]){ }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --wall:#2b2622; --wall-2:#211d1a; --floor:#3a322b; --floor-2:#2d2621;
-      --ink:#f3ece1; --ink-soft:#b9ac9b; --card:#332c26; --line:#4a4038;
-      --shadow:rgba(0,0,0,.45);
+      --wall:#2b2622; --floor:#3a322b; --floor-2:#2d2621;
+      --ink:#f3ece1; --ink-soft:#b9ac9b; --card:#332c26; --card-sub:#2c2621; --line:#4a4038;
+      --shadow:rgba(0,0,0,.5);
     }
   }
   :root[data-theme="dark"]{
-      --wall:#2b2622; --wall-2:#211d1a; --floor:#3a322b; --floor-2:#2d2621;
-      --ink:#f3ece1; --ink-soft:#b9ac9b; --card:#332c26; --line:#4a4038;
-      --shadow:rgba(0,0,0,.45);
+      --wall:#2b2622; --floor:#3a322b; --floor-2:#2d2621;
+      --ink:#f3ece1; --ink-soft:#b9ac9b; --card:#332c26; --card-sub:#2c2621; --line:#4a4038;
+      --shadow:rgba(0,0,0,.5);
   }
   *{box-sizing:border-box}
   body{
     margin:0; min-height:100vh; color:var(--ink);
     font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
-    background:linear-gradient(180deg,var(--wall) 0%,var(--wall) 46%,var(--floor) 46%,var(--floor-2) 100%);
+    background:linear-gradient(180deg,var(--wall) 0%,var(--wall) 62%,var(--floor) 62%,var(--floor-2) 100%);
   }
-  .room{max-width:880px; margin:0 auto; padding:40px 16px 64px}
+  .room{max-width:860px; margin:0 auto; padding:36px 16px 72px}
   header h1{font-size:22px; margin:0 0 6px; letter-spacing:.02em}
-  header p{margin:0 0 28px; color:var(--ink-soft); font-size:14px}
+  header p{margin:0 0 26px; color:var(--ink-soft); font-size:14px; line-height:1.6}
 
-  .bags{display:flex; flex-wrap:wrap; gap:18px; justify-content:center; align-items:flex-end}
+  /* ---- 主役：キャリーケース / ショルダーバッグ ---- */
+  .main-bags{display:flex; gap:16px; align-items:stretch}
   .bag-btn{
-    flex:1 1 200px; max-width:240px;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-    padding:18px 12px 14px; border:2px solid transparent; border-radius:22px;
-    background:transparent; color:inherit; font:inherit; cursor:pointer;
-    transition:transform .18s ease, background .18s ease, border-color .18s ease;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    border:2px solid var(--line); border-radius:22px; background:var(--card);
+    color:inherit; font:inherit; cursor:pointer; padding:18px 14px 16px;
+    box-shadow:0 10px 22px var(--shadow);
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   }
-  .bag-btn svg{width:132px; height:132px; filter:drop-shadow(0 10px 10px var(--shadow)); transition:transform .18s ease}
-  .bag-btn:hover{background:color-mix(in srgb,var(--card) 70%,transparent)}
-  .bag-btn:hover svg{transform:translateY(-6px) rotate(-2deg)}
+  .main-bags .bag-btn{flex:1 1 0; min-width:0}
+  /* 床のラインに接地させるための棚。高さは一番大きいキャリーケース基準 */
+  .shelf{height:calc(70 * var(--cm)); display:flex; align-items:flex-end; justify-content:center}
+  .bag-btn svg{height:auto; display:block; filter:drop-shadow(0 8px 8px var(--shadow)); transition:transform .18s ease}
+  .bag-btn[data-bag="suitcase"] svg{height:calc(70 * var(--cm))}
+  .bag-btn[data-bag="shoulder"] svg{height:calc(42 * var(--cm))}
+  .bag-btn[data-bag="backpack"] svg{height:calc(50 * var(--cm))}
+  .bag-btn:hover{transform:translateY(-3px); box-shadow:0 16px 28px var(--shadow)}
+  .bag-btn:hover svg{transform:translateY(-4px) rotate(-1.5deg)}
   .bag-btn:focus-visible{outline:none; border-color:var(--ink)}
-  .bag-btn[aria-expanded="true"]{background:var(--card); border-color:var(--line)}
-  .bag-btn[aria-expanded="true"] svg{transform:translateY(-4px)}
-  .bag-btn .label{font-size:15px; font-weight:700}
-  .bag-btn .count{font-size:12px; color:var(--ink-soft)}
+  .bag-btn[aria-expanded="true"]{border-color:var(--ink)}
+  .bag-btn .text{display:flex; flex-direction:column; align-items:center; gap:2px}
+  .bag-btn .label{font-size:16px; font-weight:700}
+  .bag-btn .meta{font-size:12px; color:var(--ink-soft)}
 
+  /* ---- サブ：リュックサック ---- */
+  .sub-bags{margin-top:14px}
+  .sub-bags .bag-btn{
+    flex-direction:row; align-items:center; justify-content:flex-start; gap:16px;
+    width:100%; padding:10px 18px 10px 12px; border-radius:18px;
+    background:var(--card-sub); border-style:dashed; box-shadow:none;
+  }
+  .sub-bags .shelf{height:calc(50 * var(--cm)); flex:0 0 auto}
+  .sub-bags .text{align-items:flex-start; gap:3px; text-align:left}
+  .sub-bags .label{font-size:15px}
+  .sub-bags .bag-btn:hover{box-shadow:0 10px 20px var(--shadow)}
+
+  /* ---- 持ち物リスト ---- */
   .panel{
-    margin:26px auto 0; max-width:520px; background:var(--card);
+    margin:22px auto 0; max-width:540px; background:var(--card);
     border:1px solid var(--line); border-radius:18px; padding:18px 20px;
     box-shadow:0 14px 28px var(--shadow);
   }
@@ -61,16 +82,24 @@
   .panel li{display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px dashed var(--line); font-size:14px}
   .panel li:last-child{border-bottom:none}
   .panel input{width:18px; height:18px; accent-color:#c9705d}
+
+  @media (max-width:520px){
+    :root{--cm:1.7px}
+    .main-bags{gap:10px}
+    .bag-btn{padding:14px 8px 12px}
+  }
 </style>
 </head>
 <body>
 <div class="room">
   <header>
     <h1>今日の荷造り</h1>
-    <p>バッグを押すと、その中に入れるものリストが開きます。</p>
+    <p>バッグを押すと、その中に入れるものリストが開きます。<br>大きさは実物の比率どおりに並べています。</p>
   </header>
 
-  <div class="bags" id="bags"></div>
+  <div class="main-bags" id="mainBags"></div>
+  <div class="sub-bags" id="subBags"></div>
+
   <section class="panel" id="panel" hidden aria-live="polite">
     <h2 id="panelTitle"></h2>
     <ul id="panelList"></ul>
@@ -79,15 +108,17 @@
 
 <script>
 const BAGS = [
-  { id:"suitcase", label:"キャリーケース", file:"assets/icons/suitcase.svg",
+  { id:"suitcase", role:"main", label:"キャリーケース", size:"45 × 70 cm ／ 中型",
+    file:"assets/icons/suitcase.svg",
     items:["着替え 3日分","洗面用具","充電器一式","折りたたみ傘","おみやげ用スペース"] },
-  { id:"backpack", label:"リュックサック", file:"assets/icons/backpack.svg",
-    items:["ノートPC","モバイルバッテリー","羽織り","飲み物","本"] },
-  { id:"shoulder", label:"ショルダーバッグ", file:"assets/icons/shoulder-bag.svg",
+  { id:"shoulder", role:"main", label:"ショルダーバッグ", size:"27 × 19 cm ／ 常に持ち歩く",
+    file:"assets/icons/shoulder-bag.svg",
     items:["財布","パスポート","スマホ","リップ","チケット"] },
+  { id:"backpack", role:"sub", label:"リュックサック", size:"32 × 50 cm ／ 観光先に合わせて出し入れ",
+    file:"assets/icons/backpack.svg",
+    items:["ノートPC","モバイルバッテリー","羽織り","飲み物","本"] },
 ];
 
-const bagsEl = document.getElementById("bags");
 const panel = document.getElementById("panel");
 const panelTitle = document.getElementById("panelTitle");
 const panelList = document.getElementById("panelList");
@@ -98,10 +129,17 @@ Promise.all(BAGS.map(b => fetch(b.file).then(r => r.text()).catch(() => ""))).th
     const btn = document.createElement("button");
     btn.className = "bag-btn";
     btn.type = "button";
+    btn.dataset.bag = bag.id;
     btn.setAttribute("aria-expanded", "false");
-    btn.innerHTML = `${svgs[i]}<span class="label">${bag.label}</span><span class="count">${bag.items.length} アイテム</span>`;
+    btn.innerHTML = `
+      <span class="shelf">${svgs[i]}</span>
+      <span class="text">
+        <span class="label">${bag.label}</span>
+        <span class="meta">${bag.size}</span>
+        <span class="meta">${bag.items.length} アイテム</span>
+      </span>`;
     btn.addEventListener("click", () => toggle(bag, btn));
-    bagsEl.appendChild(btn);
+    document.getElementById(bag.role === "main" ? "mainBags" : "subBags").appendChild(btn);
   });
 });
 
