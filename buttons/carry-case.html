@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キャリーケースボタン</title>
+<style>
+  :root{
+    --bg:#fffaf2;
+    --case-body:#5ecfd6;      /* 明るいターコイズ */
+    --case-body-dark:#37b3bd;
+    --case-panel:#b9f0f3;
+    --case-belt:#ffd166;      /* 明るい黄色 */
+    --case-handle:#ff8fab;    /* 明るいピンク */
+    --wheel:#6c5ce7;          /* 明るい紫 */
+    --ink:#2f3e57;
+    --shadow:rgba(47,62,87,.18);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 20% 15%, #ffe9f0 0%, transparent 45%),
+      radial-gradient(circle at 80% 85%, #e3f7ff 0%, transparent 45%),
+      var(--bg);
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+    color:var(--ink);
+  }
+
+  /* ---- ステージ（ボタン＋飛び出すアイテム） ---- */
+  .case-stage{ position:relative; width:260px; height:260px; }
+
+  .case-btn{
+    position:absolute; inset:0; margin:auto;
+    width:200px; height:200px;
+    display:grid; place-items:center;
+    background:#fff;
+    border:4px solid #ffe3b0;
+    border-radius:32px;
+    box-shadow:0 10px 0 #ffe3b0, 0 16px 28px var(--shadow);
+    cursor:pointer;
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .case-btn:hover{ transform:translateY(-3px); }
+  .case-btn:active{ transform:translateY(6px); box-shadow:0 4px 0 #ffe3b0, 0 8px 14px var(--shadow); }
+  .case-btn:focus-visible{ outline:4px solid #ff8fab; outline-offset:6px; }
+
+  .case-btn svg{ width:128px; height:128px; overflow:visible; }
+  .case-lid{ transform-origin:50% 76%; transition:transform .45s cubic-bezier(.34,1.56,.64,1); }
+  .case-btn[aria-expanded="true"] .case-lid{ transform:rotate(-16deg) translateY(-4px); }
+  .case-btn[aria-expanded="true"] .case-body{ animation:wiggle .5s ease; }
+  @keyframes wiggle{
+    0%,100%{transform:translateY(0) rotate(0)}
+    30%{transform:translateY(3px) rotate(-2deg)}
+    65%{transform:translateY(0) rotate(2deg)}
+  }
+
+  .case-label{
+    position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
+    font-size:15px; font-weight:700; letter-spacing:.06em;
+    background:#fff; border:3px solid #ffe3b0; border-radius:999px;
+    padding:4px 16px; white-space:nowrap;
+  }
+
+  /* ---- 飛び出すアイテム ---- */
+  .case-items{ position:absolute; inset:0; pointer-events:none; }
+  .case-item{
+    position:absolute; left:50%; top:50%;
+    width:64px; height:64px; margin:-32px 0 0 -32px;
+    display:grid; place-items:center;
+    background:#fff; border-radius:50%;
+    border:3px solid #fff;
+    box-shadow:0 6px 14px var(--shadow);
+    opacity:0;
+    transform:translate(0,0) scale(.3);
+    transition:transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+  }
+  .case-item svg{ width:36px; height:36px; }
+  .case-item span{
+    position:absolute; bottom:-20px;
+    font-size:11px; font-weight:700; white-space:nowrap;
+    background:#fff; border-radius:999px; padding:1px 8px;
+    box-shadow:0 2px 6px var(--shadow);
+  }
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item{
+    opacity:1;
+    transform:translate(var(--x), var(--y)) scale(1);
+  }
+  /* 順番にポンッと出す */
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(1){transition-delay:.02s}
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(2){transition-delay:.07s}
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(3){transition-delay:.12s}
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(4){transition-delay:.17s}
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(5){transition-delay:.22s}
+  .case-btn[aria-expanded="true"] ~ .case-items .case-item:nth-child(6){transition-delay:.27s}
+
+  @media (prefers-reduced-motion:reduce){
+    .case-btn,.case-item,.case-lid{transition-duration:.01ms}
+    .case-btn[aria-expanded="true"] .case-body{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="case-stage">
+  <!-- ボタン本体 -->
+  <button class="case-btn" type="button" aria-expanded="false" aria-controls="case-items">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <!-- 取っ手（ふたと一緒に動く） -->
+      <g class="case-lid">
+        <path d="M36 30V20a14 14 0 0 1 28 0v10" fill="none"
+              stroke="var(--case-handle)" stroke-width="7" stroke-linecap="round"/>
+        <rect x="22" y="28" width="56" height="12" rx="6" fill="var(--case-body-dark)"/>
+      </g>
+      <!-- 本体 -->
+      <g class="case-body">
+        <rect x="16" y="34" width="68" height="50" rx="12" fill="var(--case-body)"/>
+        <rect x="24" y="42" width="52" height="34" rx="8" fill="var(--case-panel)"/>
+        <rect x="44" y="34" width="12" height="50" fill="var(--case-belt)"/>
+        <rect x="46" y="53" width="8" height="12" rx="3" fill="#fff"/>
+        <circle cx="30" cy="88" r="6" fill="var(--wheel)"/>
+        <circle cx="70" cy="88" r="6" fill="var(--wheel)"/>
+      </g>
+    </svg>
+    <span class="case-label">なにを入れる？</span>
+  </button>
+
+  <!-- 押すと前面に出てくる中身 -->
+  <div class="case-items" id="case-items">
+    <div class="case-item" style="--x:-96px; --y:-74px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l5 4-3 3-1-1v12H7V9L6 10 3 7z" fill="#ff8fab"/></svg>
+      <span>Tシャツ</span>
+    </div>
+    <div class="case-item" style="--x:0px; --y:-112px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3" fill="#6c5ce7"/><circle cx="12" cy="10" r="3.4" fill="#ffe27a"/><rect x="8" y="16" width="8" height="2" rx="1" fill="#ffe27a"/></svg>
+      <span>パスポート</span>
+    </div>
+    <div class="case-item" style="--x:96px; --y:-74px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.2 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.8z" fill="#4ec3f0"/><circle cx="12" cy="13" r="4" fill="#fffaf2"/><circle cx="12" cy="13" r="2" fill="#37b3bd"/></svg>
+      <span>カメラ</span>
+    </div>
+    <div class="case-item" style="--x:-112px; --y:14px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="8" height="6" rx="3" fill="#ffd166"/><rect x="13" y="9" width="8" height="6" rx="3" fill="#ffd166"/><path d="M11 12h2" stroke="#ff8fab" stroke-width="2"/></svg>
+      <span>サングラス</span>
+    </div>
+    <div class="case-item" style="--x:112px; --y:14px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="7" rx="3" fill="#7ee0a1"/><rect x="10.5" y="8" width="3" height="14" rx="1.5" fill="#ffffff" stroke="#7ee0a1" stroke-width="1.6"/></svg>
+      <span>歯ブラシ</span>
+    </div>
+    <div class="case-item" style="--x:0px; --y:118px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#ffb15e"/><path d="M12 3a9 9 0 0 0 0 18M3 12h18" stroke="#fffaf2" stroke-width="1.8" fill="none"/></svg>
+      <span>地球の歩き方</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.querySelector('.case-btn');
+  const label = btn.querySelector('.case-label');
+  btn.addEventListener('click', () => {
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    label.textContent = open ? 'なにを入れる？' : 'パッキング中！';
+  });
+</script>
+</body>
+</html>
