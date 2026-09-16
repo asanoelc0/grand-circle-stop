@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>旅行持ち物タグ仕分け</title>
+<style>
+  :root{
+    --bg:#f4f6fa; --panel:#ffffff; --line:#dfe4ec; --text:#1c2431; --sub:#6b7688;
+    --accent:#3b6df6; --accent-soft:#e8efff;
+    --take:#1f9d61; --take-soft:#e3f6ec;
+    --buy:#d9812a; --buy-soft:#fdf0e0;
+    --qty:#6a54d8; --qty-soft:#ece8fc;
+    --genre:#0e8ca6; --genre-soft:#e0f4f9;
+    --danger:#d8453f; --danger-soft:#fdeceb;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--text);display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{
+    padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  header h1{font-size:16px;margin:0;font-weight:700}
+  header .hint{font-size:11px;color:var(--sub);flex:1 1 100%}
+  .add-form{display:flex;gap:6px;margin-left:auto}
+  .add-form input{
+    border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;width:150px;
+  }
+  .add-form button{
+    border:none;background:var(--accent);color:#fff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;
+  }
+  .toolbar{
+    display:flex;gap:6px;align-items:center;padding:8px 14px;background:var(--panel);
+    border-bottom:1px solid var(--line);overflow-x:auto;
+  }
+  .toolbar .filter{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;
+    cursor:pointer;white-space:nowrap;color:var(--sub);
+  }
+  .toolbar .filter.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+  .toolbar .spacer{flex:1}
+  .toolbar .link{border:none;background:none;color:var(--sub);font-size:12px;cursor:pointer;text-decoration:underline;white-space:nowrap}
+
+  main{flex:1;overflow-y:auto;padding:12px;display:flex;justify-content:center}
+  .items{width:100%;max-width:720px;display:flex;flex-direction:column;gap:8px}
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:40px 0}
+
+  .item{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 12px;display:flex;align-items:center;gap:10px;
+    transition:transform .08s ease,box-shadow .12s ease,border-color .12s ease;
+  }
+  .item.drop-target{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.01)}
+  .item.picked{opacity:.45}
+  .item .grip{color:#b9c1cf;font-size:16px;cursor:grab;touch-action:none;padding:2px 4px;user-select:none}
+  .item .body{flex:1;min-width:0}
+  .item .name{font-size:15px;font-weight:600;word-break:break-word}
+  .item .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .item .tags .none{font-size:11px;color:#aeb6c4}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 9px;
+    font-size:12px;font-weight:600;border:1px solid transparent;white-space:nowrap;
+  }
+  .chip .x{cursor:pointer;opacity:.55;font-weight:700;padding-left:2px}
+  .chip .x:hover{opacity:1}
+  .chip.method-take{background:var(--take-soft);color:var(--take);border-color:var(--take)}
+  .chip.method-buy{background:var(--buy-soft);color:var(--buy);border-color:var(--buy)}
+  .chip.qty{background:var(--qty-soft);color:var(--qty);border-color:var(--qty)}
+  .chip.genre{background:var(--genre-soft);color:var(--genre);border-color:var(--genre)}
+  .chip.danger{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
+
+  footer{
+    background:var(--panel);border-top:1px solid var(--line);padding:8px 12px 10px;
+    display:flex;gap:10px;align-items:stretch;
+  }
+  .groups{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:34vh}
+  .group{display:flex;align-items:center;gap:8px}
+  .group .label{
+    font-size:11px;color:var(--sub);width:66px;flex:none;text-align:right;line-height:1.25;
+  }
+  .group .palette{display:flex;gap:6px;overflow-x:auto;padding:2px 0;flex:1}
+  .tag{
+    cursor:grab;touch-action:none;user-select:none;flex:none;
+  }
+  .tag.selected{outline:2px solid var(--accent);outline-offset:1px}
+  .trash{
+    width:74px;flex:none;border:2px dashed var(--line);border-radius:var(--radius);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    color:var(--sub);font-size:10px;text-align:center;touch-action:none;cursor:grab;user-select:none;
+  }
+  .trash .icon{font-size:26px;line-height:1}
+  .trash.drop-target{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+
+  #ghost{
+    position:fixed;z-index:99;pointer-events:none;opacity:.92;
+    transform:translate(-50%,-50%);box-shadow:0 6px 16px rgba(0,0,0,.2);
+  }
+  #ghost.item-ghost{
+    background:#fff;border:1px solid var(--accent);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;
+  }
+  .toast{
+    position:fixed;left:50%;bottom:calc(34vh + 60px);transform:translateX(-50%);
+    background:#1c2431;color:#fff;font-size:12px;padding:7px 14px;border-radius:999px;
+    opacity:0;transition:opacity .2s;pointer-events:none;z-index:120;
+  }
+  .toast.show{opacity:.92}
+  @media (max-width:520px){
+    .group .label{width:52px;font-size:10px}
+    .add-form input{width:110px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧳 旅行持ち物タグ仕分け</h1>
+  <form class="add-form" id="add-form">
+    <input id="add-input" type="text" placeholder="アイテムを追加" maxlength="40">
+    <button type="submit">追加</button>
+  </form>
+  <div class="hint">下のタグをアイテムへドラッグ＆ドロップ／アイテムをゴミ箱へドラッグで削除（タップで選択 → アイテムをタップでも適用できます）</div>
+</header>
+
+<div class="toolbar" id="toolbar"></div>
+
+<main>
+  <div class="items" id="items"></div>
+</main>
+
+<footer>
+  <div class="groups" id="groups"></div>
+  <div class="trash" id="trash" data-drag="trash">
+    <span class="icon">🗑️</span>
+    <span>ゴミ箱<br>ドロップで削除</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------------------------------------------------------
+   * タググループ定義
+   *  kind:'single' … 同じグループ内で1つだけ保持（上書き）＝選択肢が混ざらない
+   *  kind:'qty'    … 個数を加算／設定する専用グループ
+   * ------------------------------------------------------------- */
+  var GROUPS = [
+    {
+      id: 'method', label: '持っていく<br>／現地調達', kind: 'single',
+      tags: [
+        { id: 'take', label: '🎒 持っていく', cls: 'method-take' },
+        { id: 'buy',  label: '🛒 現地調達',   cls: 'method-buy'  }
+      ]
+    },
+    {
+      id: 'qty', label: '個数', kind: 'qty',
+      tags: [
+        { id: 'set1', label: '1個',  cls: 'qty', set: 1 },
+        { id: 'set2', label: '2個',  cls: 'qty', set: 2 },
+        { id: 'set3', label: '3個',  cls: 'qty', set: 3 },
+        { id: 'set5', label: '5個',  cls: 'qty', set: 5 },
+        { id: 'inc',  label: '＋1',  cls: 'qty', delta: 1 },
+        { id: 'dec',  label: '−1',   cls: 'qty', delta: -1 }
+      ]
+    },
+    {
+      id: 'genre', label: 'ジャンル', kind: 'single',
+      tags: [
+        { id: 'food',     label: '💧 水・食料',   cls: 'genre' },
+        { id: 'cabin',    label: '✈️ 機内グッズ', cls: 'genre' },
+        { id: 'clothes',  label: '👕 衣服',       cls: 'genre' },
+        { id: 'toiletry', label: '🧼 洗面・衛生', cls: 'genre' },
+        { id: 'gadget',   label: '🔌 電子機器',   cls: 'genre' },
+        { id: 'docs',     label: '📄 書類・貴重品', cls: 'genre' },
+        { id: 'medicine', label: '💊 医薬品',     cls: 'genre' },
+        { id: 'other',    label: '📦 その他',     cls: 'genre' }
+      ]
+    }
+  ];
+
+  var DEFAULT_ITEMS = [
+    'パスポート', '航空券（eチケット控え）', '財布・現金', 'クレジットカード',
+    'スマートフォン', 'モバイルバッテリー', '充電ケーブル', '変換プラグ',
+    'ネックピロー', 'アイマスク', '耳栓', '常備薬',
+    'Tシャツ', '下着', '靴下', '上着（羽織り）',
+    '歯ブラシセット', 'シャンプー・リンス', 'タオル', '日焼け止め',
+    '飲料水', '行動食（お菓子）', 'エコバッグ', '折りたたみ傘'
+  ];
+
+  var STORAGE_KEY = 'travel-packing-tagger/v1';
+
+  /* ---------- 状態 ---------- */
+  var seq = 1;   // アイテムIDの連番（state 初期化より前に定義する必要がある）
+  var state = load() || { items: DEFAULT_ITEMS.map(function (n) { return newItem(n); }) };
+  var filter = 'all';          // 'all' | 'untagged' | method:* | genre:*
+  var selected = null;         // タップ操作用に選択中のタグ
+
+  function newItem(name) {
+    return { id: 'i' + (seq++) + '-' + Date.now().toString(36), name: name, method: null, qty: 0, genre: null };
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.items)) return null;
+      return data;
+    } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* 保存不可でも継続 */ }
+  }
+
+  function findGroup(id) {
+    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].id === id) return GROUPS[i];
+    return null;
+  }
+  function findTag(groupId, tagId) {
+    var g = findGroup(groupId);
+    if (!g) return null;
+    for (var i = 0; i < g.tags.length; i++) if (g.tags[i].id === tagId) return g.tags[i];
+    return null;
+  }
+  function findItem(id) {
+    for (var i = 0; i < state.items.length; i++) if (state.items[i].id === id) return state.items[i];
+    return null;
+  }
+
+  /* ---------- タグ適用（グループごとに独立して上書き） ---------- */
+  function applyTag(item, groupId, tagId) {
+    var group = findGroup(groupId), tag = findTag(groupId, tagId);
+    if (!item || !group || !tag) return;
+
+    if (group.kind === 'qty') {
+      if (tag.set !== undefined) item.qty = tag.set;
+      else item.qty = Math.max(0, item.qty + tag.delta);
+      toast(item.name + '：個数 ' + (item.qty || 'なし'));
+    } else {
+      // 同グループの既存タグを置き換えるので、選択肢が混ざらない
+      item[groupId] = (item[groupId] === tagId) ? null : tagId;
+      toast(item.name + '：' + (item[groupId] ? stripTag(tag.label) : '解除'));
+    }
+    save(); render();
+  }
+
+  function clearTag(item, groupId) {
+    if (groupId === 'qty') item.qty = 0; else item[groupId] = null;
+    save(); render();
+  }
+
+  function removeItem(item) {
+    state.items = state.items.filter(function (it) { return it.id !== item.id; });
+    toast('削除：' + item.name);
+    save(); render();
+  }
+
+  function stripTag(label) { return label.replace(/<br>/g, '').replace(/^[^\wぁ-んァ-ン一-龠＋−]+/, '').trim(); }
+
+  /* ---------- 描画 ---------- */
+  var itemsEl = document.getElementById('items');
+  var groupsEl = document.getElementById('groups');
+  var toolbarEl = document.getElementById('toolbar');
+  var trashEl = document.getElementById('trash');
+
+  function matchesFilter(item) {
+    if (filter === 'all') return true;
+    if (filter === 'untagged') return !item.method && !item.genre && !item.qty;
+    var parts = filter.split(':');
+    return item[parts[0]] === parts[1];
+  }
+
+  function renderToolbar() {
+    var html = '<button class="filter' + (filter === 'all' ? ' on' : '') + '" data-filter="all">すべて (' + state.items.length + ')</button>';
+    html += '<button class="filter' + (filter === 'untagged' ? ' on' : '') + '" data-filter="untagged">未分類</button>';
+    ['method', 'genre'].forEach(function (gid) {
+      findGroup(gid).tags.forEach(function (t) {
+        var key = gid + ':' + t.id;
+        var count = state.items.filter(function (it) { return it[gid] === t.id; }).length;
+        if (!count) return;
+        html += '<button class="filter' + (filter === key ? ' on' : '') + '" data-filter="' + key + '">' + t.label + ' (' + count + ')</button>';
+      });
+    });
+    html += '<span class="spacer"></span>';
+    html += '<button class="link" data-action="reset">初期化</button>';
+    toolbarEl.innerHTML = html;
+  }
+
+  function chipHtml(groupId, tag, extra) {
+    return '<span class="chip ' + tag.cls + '" data-group="' + groupId + '" data-tag="' + tag.id + '">' +
+      tag.label + (extra || '') + '</span>';
+  }
+
+  function itemTagsHtml(item) {
+    var html = '';
+    if (item.method) {
+      var t = findTag('method', item.method);
+      html += '<span class="chip ' + t.cls + '">' + t.label + '<span class="x" data-clear="method">×</span></span>';
+    }
+    if (item.qty > 0) {
+      html += '<span class="chip qty">× ' + item.qty + '<span class="x" data-clear="qty">×</span></span>';
+    }
+    if (item.genre) {
+      var g = findTag('genre', item.genre);
+      html += '<span class="chip ' + g.cls + '">' + g.label + '<span class="x" data-clear="genre">×</span></span>';
+    }
+    if (!html) html = '<span class="none">タグ未設定</span>';
+    return html;
+  }
+
+  function renderItems() {
+    var list = state.items.filter(matchesFilter);
+    if (!list.length) {
+      itemsEl.innerHTML = '<div class="empty">' + (state.items.length ? '該当するアイテムがありません' : 'アイテムを追加してください') + '</div>';
+      return;
+    }
+    itemsEl.innerHTML = list.map(function (item) {
+      return '<div class="item" data-item="' + item.id + '" data-drop="item">' +
+        '<span class="grip" data-drag="item" data-item="' + item.id + '">⠿</span>' +
+        '<div class="body"><div class="name">' + esc(item.name) + '</div>' +
+        '<div class="tags">' + itemTagsHtml(item) + '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderGroups() {
+    groupsEl.innerHTML = GROUPS.map(function (g) {
+      var tags = g.tags.map(function (t) {
+        var sel = selected && selected.group === g.id && selected.tag === t.id ? ' selected' : '';
+        return '<span class="chip tag ' + t.cls + sel + '" data-drag="tag" data-group="' + g.id + '" data-tag="' + t.id + '">' + t.label + '</span>';
+      }).join('');
+      return '<div class="group"><div class="label">' + g.label + '</div><div class="palette">' + tags + '</div></div>';
+    }).join('');
+  }
+
+  function render() { renderToolbar(); renderItems(); renderGroups(); }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  var toastEl = document.getElementById('toast'), toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1200);
+  }
+
+  /* ---------------------------------------------------------------
+   * ドラッグ＆ドロップ（Pointer Events：マウス・タッチ共通）
+   * ------------------------------------------------------------- */
+  var drag = null, ghost = null, hovered = null;
+
+  document.addEventListener('pointerdown', function (e) {
+    var handle = e.target.closest('[data-drag]');
+    if (!handle || e.button === 1 || e.button === 2) return;
+    var kind = handle.getAttribute('data-drag');
+
+    drag = {
+      kind: kind,
+      group: handle.getAttribute('data-group'),
+      tag: handle.getAttribute('data-tag'),
+      itemId: handle.getAttribute('data-item'),
+      startX: e.clientX, startY: e.clientY,
+      moved: false, handle: handle, pointerId: e.pointerId
+    };
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  document.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!drag.moved) {
+      if (Math.abs(e.clientX - drag.startX) < 5 && Math.abs(e.clientY - drag.startY) < 5) return;
+      drag.moved = true;
+      startGhost();
+    }
+    ghost.style.left = e.clientX + 'px';
+    ghost.style.top = e.clientY + 'px';
+    setHover(dropTargetAt(e.clientX, e.clientY));
+  });
+
+  document.addEventListener('pointerup', function (e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    var d = drag, target = d.moved ? dropTargetAt(e.clientX, e.clientY) : null;
+    cleanupDrag();
+    if (d.moved) { if (target) drop(d, target); }
+    else { tap(d); }
+  });
+
+  document.addEventListener('pointercancel', function () { cleanupDrag(); });
+
+  function startGhost() {
+    ghost = document.createElement('div');
+    if (drag.kind === 'item') {
+      var item = findItem(drag.itemId);
+      ghost.className = 'item-ghost';
+      ghost.textContent = item ? item.name : '';
+      var card = document.querySelector('.item[data-item="' + drag.itemId + '"]');
+      if (card) card.classList.add('picked');
+    } else if (drag.kind === 'trash') {
+      ghost.className = 'item-ghost';
+      ghost.textContent = '🗑️ 削除';
+    } else {
+      var t = findTag(drag.group, drag.tag);
+      ghost.className = 'chip ' + t.cls;
+      ghost.innerHTML = t.label;
+    }
+    ghost.id = 'ghost';
+    document.body.appendChild(ghost);
+  }
+
+  function dropTargetAt(x, y) {
+    if (ghost) ghost.style.display = 'none';
+    var el = document.elementFromPoint(x, y);
+    if (ghost) ghost.style.display = '';
+    if (!el) return null;
+    var item = el.closest('.item');
+    var trash = el.closest('#trash');
+    if (drag.kind === 'item') return trash || null;           // アイテムはゴミ箱へのみドロップ
+    return item || null;                                       // タグ／ゴミ箱アイコンはアイテムへドロップ
+  }
+
+  function setHover(el) {
+    if (hovered === el) return;
+    if (hovered) hovered.classList.remove('drop-target');
+    hovered = el;
+    if (hovered) hovered.classList.add('drop-target');
+  }
+
+  function cleanupDrag() {
+    if (ghost) { ghost.remove(); ghost = null; }
+    setHover(null);
+    var picked = document.querySelector('.item.picked');
+    if (picked) picked.classList.remove('picked');
+    drag = null;
+  }
+
+  function drop(d, target) {
+    if (d.kind === 'item') {
+      var item = findItem(d.itemId);
+      if (item) removeItem(item);
+      return;
+    }
+    var dropped = findItem(target.getAttribute('data-item'));
+    if (!dropped) return;
+    if (d.kind === 'trash') removeItem(dropped);
+    else applyTag(dropped, d.group, d.tag);
+  }
+
+  /* ---------- タップ操作（ドラッグの代替） ---------- */
+  function tap(d) {
+    if (d.kind !== 'tag') { selected = null; render(); return; }
+    if (selected && selected.group === d.group && selected.tag === d.tag) selected = null;
+    else selected = { group: d.group, tag: d.tag };
+    render();
+    if (selected) toast('タグ選択中：アイテムをタップで適用');
+  }
+
+  /* ---------- クリック操作（タグ解除・フィルタ・選択中タグ適用） ---------- */
+  document.addEventListener('click', function (e) {
+    var clear = e.target.closest('[data-clear]');
+    if (clear) {
+      var itemEl = clear.closest('.item');
+      var item = findItem(itemEl.getAttribute('data-item'));
+      if (item) clearTag(item, clear.getAttribute('data-clear'));
+      return;
+    }
+
+    var filterBtn = e.target.closest('[data-filter]');
+    if (filterBtn) { filter = filterBtn.getAttribute('data-filter'); render(); return; }
+
+    if (e.target.closest('[data-action="reset"]')) {
+      if (confirm('すべてのアイテムとタグを初期状態に戻します。よろしいですか？')) {
+        state = { items: DEFAULT_ITEMS.map(function (n) { return newItem(n); }) };
+        filter = 'all'; selected = null; save(); render();
+      }
+      return;
+    }
+
+    var card = e.target.closest('.item');
+    if (card && selected) {
+      var target = findItem(card.getAttribute('data-item'));
+      if (target) applyTag(target, selected.group, selected.tag);
+    }
+  });
+
+  /* ---------- アイテム追加 ---------- */
+  document.getElementById('add-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = document.getElementById('add-input');
+    var name = input.value.trim();
+    if (!name) return;
+    state.items.push(newItem(name));
+    input.value = '';
+    filter = 'all';
+    save(); render();
+    itemsEl.parentElement.scrollTop = itemsEl.parentElement.scrollHeight;
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
