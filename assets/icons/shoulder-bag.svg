@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="shoulderTitle shoulderDesc">
+  <title id="shoulderTitle">ショルダーバッグ</title>
+  <desc id="shoulderDesc">長いストラップとフラップが付いたショルダーバッグ</desc>
+  <g fill="none" stroke="var(--bag-ink, #3f3228)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- long shoulder strap -->
+    <path d="M27 66V44c0-18 14-30 37-30s37 12 37 30v22" stroke-width="7" stroke="var(--bag-shade, #a8543f)"/>
+    <path d="M27 66V44c0-18 14-30 37-30s37 12 37 30v22"/>
+    <!-- strap adjuster -->
+    <rect x="95" y="46" width="12" height="15" rx="3" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
+    <!-- body -->
+    <path d="M22 66h84v32a14 14 0 0 1-14 14H36a14 14 0 0 1-14-14z" fill="var(--bag-base, #c9705d)"/>
+    <!-- flap -->
+    <path d="M22 66h84v12a8 8 0 0 1-8 8H30a8 8 0 0 1-8-8z" fill="var(--bag-shade, #b45f4d)"/>
+    <!-- buckle -->
+    <path d="M64 80v8" stroke-width="5"/>
+    <rect x="57" y="84" width="14" height="10" rx="3" fill="var(--bag-metal, #f4efe4)" stroke-width="2.6"/>
+    <!-- front seam -->
+    <path d="M38 102h52" stroke-width="2.4" opacity=".5"/>
+  </g>
+</svg>
