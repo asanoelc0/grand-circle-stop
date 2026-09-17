@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>旅行持ち物チェックリスト</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e2e5ea;
+    --text: #1d2026;
+    --muted: #6b7280;
+    --accent: #2f6df6;
+    --accent-soft: #e8efff;
+    --done: #16a34a;
+    --danger: #d64545;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --panel: #1c1f25;
+      --border: #2d323b;
+      --text: #e8eaee;
+      --muted: #9aa2af;
+      --accent: #6f9bff;
+      --accent-soft: #23304d;
+      --done: #4ade80;
+      --danger: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 16px 16px 80px; }
+  header h1 { font-size: 1.4rem; margin: 16px 0 4px; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 0 0 16px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .panel h2 { font-size: .95rem; margin: 0 0 10px; }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grow { flex: 1 1 160px; min-width: 0; }
+
+  input[type=text], input[type=number], select {
+    font: inherit;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    min-width: 0;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: 2px solid var(--accent-soft); border-color: var(--accent);
+  }
+  button {
+    font: inherit;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { opacity: .9; color: #fff; }
+  button.icon { padding: 3px 8px; font-size: .8rem; color: var(--muted); }
+  button.icon:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* 進捗 */
+  .bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--done); transition: width .2s; }
+  .total-num { font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--muted); }
+
+  /* タグ */
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .73rem; line-height: 1.5;
+    padding: 1px 8px; border-radius: 99px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .tag-filter { cursor: pointer; background: transparent; }
+  .tag-filter[aria-pressed="true"] { background: currentColor; }
+  .tag-filter[aria-pressed="true"] span { color: var(--panel); }
+  .tag-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* 入れ物 */
+  .container-card { padding: 0; overflow: hidden; }
+  .container-head {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .container-head .name {
+    font-weight: 600; font-size: 1rem; border: 1px solid transparent;
+    background: transparent; padding: 3px 6px; border-radius: 6px; flex: 1 1 140px;
+    color: var(--text); font-family: inherit;
+  }
+  .container-head .name:hover { border-color: var(--border); }
+  .container-progress { flex: 0 0 120px; }
+
+  ul.items { list-style: none; margin: 0; padding: 0; }
+  ul.items li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 9px 14px; border-bottom: 1px solid var(--border);
+  }
+  ul.items li.packed .item-name { text-decoration: line-through; color: var(--muted); }
+  input[type=checkbox] { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--done); flex: none; }
+  .item-body { flex: 1 1 auto; min-width: 0; }
+  .item-name { word-break: break-word; }
+  .qty { color: var(--muted); font-size: .85rem; margin-left: 6px; }
+  .item-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+  .item-actions { display: flex; gap: 6px; align-items: center; flex: none; }
+  .item-actions select { font-size: .78rem; padding: 3px 6px; }
+
+  .add-item { padding: 10px 14px; background: var(--bg); }
+  .add-item input[type=number] { width: 68px; }
+  .empty { color: var(--muted); font-size: .85rem; padding: 14px; margin: 0; }
+  .hint { color: var(--muted); font-size: .78rem; margin: 6px 0 0; }
+  .footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>旅行持ち物チェックリスト</h1>
+    <p class="sub">入れ物ごとにリストを分けて、ジャンルのタグで整理できます。内容はこのブラウザに自動保存されます。</p>
+  </header>
+
+  <section class="panel">
+    <div class="row" style="justify-content: space-between; margin-bottom: 8px;">
+      <h2 style="margin:0">全体の進捗</h2>
+      <span class="total-num" id="total-num">0 / 0</span>
+    </div>
+    <div class="bar"><i id="total-bar" style="width:0%"></i></div>
+  </section>
+
+  <section class="panel">
+    <h2>タグ（ジャンル）</h2>
+    <div class="tag-chips" id="tag-filters"></div>
+    <p class="hint" id="filter-hint">タグをクリックすると、そのタグの持ち物だけを表示します。</p>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="new-tag" class="grow" placeholder="新しいタグ名（例: 防寒）" maxlength="20">
+      <input type="color" id="new-tag-color" value="#2f6df6" aria-label="タグの色" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--bg)">
+      <button id="add-tag">タグを追加</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>入れ物</h2>
+    <div class="row">
+      <input type="text" id="new-container" class="grow" placeholder="入れ物の名前（例: スーツケース / 機内持ち込みバッグ）" maxlength="40">
+      <button id="add-container" class="primary">入れ物を追加</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="search" class="grow" placeholder="持ち物を検索">
+    </div>
+  </section>
+
+  <div id="containers"></div>
+
+  <section class="panel">
+    <h2>データ</h2>
+    <div class="footer-actions">
+      <button id="export">JSONで書き出し</button>
+      <button id="import-btn">JSONを読み込み</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+      <button id="uncheck-all">チェックを全部外す</button>
+      <button id="reset">全部消して初期状態に戻す</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "travel-packing-checklist:v1";
+
+  var DEFAULT_TAGS = [
+    { name: "衣類",       color: "#2f6df6" },
+    { name: "洗面・衛生", color: "#0ea5a4" },
+    { name: "電子機器",   color: "#7c3aed" },
+    { name: "書類・貴重品", color: "#d97706" },
+    { name: "医薬品",     color: "#dc2626" },
+    { name: "食品",       color: "#65a30d" },
+    { name: "その他",     color: "#64748b" }
+  ];
+
+  function defaultState() {
+    return {
+      tags: DEFAULT_TAGS.slice(),
+      containers: [
+        { id: uid(), name: "スーツケース", items: [] },
+        { id: uid(), name: "機内持ち込みバッグ", items: [] }
+      ]
+    };
+  }
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  }
+
+  var state = load();
+  var activeTags = [];   // 空なら絞り込みなし
+  var query = "";
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      return normalize(parsed);
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  // 壊れた・古い保存内容でも落ちないように整形する
+  function normalize(data) {
+    var base = defaultState();
+    if (!data || typeof data !== "object") return base;
+    var tags = Array.isArray(data.tags)
+      ? data.tags.filter(function (t) { return t && typeof t.name === "string" && t.name; })
+          .map(function (t) { return { name: t.name, color: typeof t.color === "string" ? t.color : "#64748b" }; })
+      : base.tags;
+    var containers = Array.isArray(data.containers)
+      ? data.containers.filter(function (c) { return c && typeof c === "object"; }).map(function (c) {
+          return {
+            id: typeof c.id === "string" && c.id ? c.id : uid(),
+            name: typeof c.name === "string" && c.name ? c.name : "名前のない入れ物",
+            items: Array.isArray(c.items) ? c.items.filter(function (i) { return i && typeof i.name === "string" && i.name; }).map(function (i) {
+              return {
+                id: typeof i.id === "string" && i.id ? i.id : uid(),
+                name: i.name,
+                qty: Number(i.qty) > 0 ? Math.floor(Number(i.qty)) : 1,
+                packed: !!i.packed,
+                tags: Array.isArray(i.tags) ? i.tags.filter(function (t) { return typeof t === "string"; }) : []
+              };
+            }) : []
+          };
+        })
+      : base.containers;
+    return { tags: tags.length ? tags : base.tags, containers: containers };
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // プライベートモードなどで保存できない場合は黙って続行する
+    }
+  }
+
+  function tagColor(name) {
+    for (var i = 0; i < state.tags.length; i++) {
+      if (state.tags[i].name === name) return state.tags[i].color;
+    }
+    return "#64748b";
+  }
+
+  function findContainer(id) {
+    for (var i = 0; i < state.containers.length; i++) {
+      if (state.containers[i].id === id) return state.containers[i];
+    }
+    return null;
+  }
+
+  function matches(item) {
+    if (query && item.name.toLowerCase().indexOf(query) === -1) return false;
+    if (activeTags.length) {
+      for (var i = 0; i < activeTags.length; i++) {
+        if (item.tags.indexOf(activeTags[i]) === -1) return false;
+      }
+    }
+    return true;
+  }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (k) {
+        if (k === "class") node.className = props[k];
+        else if (k === "text") node.textContent = props[k];
+        else if (k.slice(0, 2) === "on") node.addEventListener(k.slice(2), props[k]);
+        else if (props[k] !== null && props[k] !== false) node.setAttribute(k, props[k]);
+      });
+    }
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function tagChip(name, onRemove) {
+    var chip = el("span", { class: "tag", style: "color:" + tagColor(name) }, [
+      el("span", { text: name })
+    ]);
+    if (onRemove) {
+      chip.appendChild(el("button", {
+        class: "icon", type: "button", title: name + " を外す",
+        style: "padding:0 2px;border:none;background:none;color:inherit;line-height:1",
+        onclick: onRemove, text: "×"
+      }));
+    }
+    return chip;
+  }
+
+  /* ---------- 描画 ---------- */
+
+  function renderTagFilters() {
+    var box = document.getElementById("tag-filters");
+    box.textContent = "";
+    if (!state.tags.length) {
+      box.appendChild(el("span", { class: "hint", text: "タグがありません。下から追加してください。" }));
+      return;
+    }
+    state.tags.forEach(function (tag) {
+      var on = activeTags.indexOf(tag.name) !== -1;
+      var btn = el("button", {
+        class: "tag tag-filter",
+        type: "button",
+        "aria-pressed": on ? "true" : "false",
+        style: "color:" + tag.color,
+        onclick: function () {
+          var idx = activeTags.indexOf(tag.name);
+          if (idx === -1) activeTags.push(tag.name); else activeTags.splice(idx, 1);
+          render();
+        }
+      }, [el("span", { text: tag.name })]);
+
+      var del = el("button", {
+        class: "icon", type: "button", title: "タグ「" + tag.name + "」を削除",
+        onclick: function () {
+          if (!confirm("タグ「" + tag.name + "」を削除します。持ち物からもこのタグが外れます。")) return;
+          state.tags = state.tags.filter(function (t) { return t.name !== tag.name; });
+          state.containers.forEach(function (c) {
+            c.items.forEach(function (i) {
+              i.tags = i.tags.filter(function (t) { return t !== tag.name; });
+            });
+          });
+          activeTags = activeTags.filter(function (t) { return t !== tag.name; });
+          save(); render();
+        },
+        text: "×"
+      });
+
+      box.appendChild(el("span", { class: "row", style: "gap:2px" }, [btn, del]));
+    });
+  }
+
+  function renderContainer(container) {
+    var visible = container.items.filter(matches);
+    var packed = container.items.filter(function (i) { return i.packed; }).length;
+    var total = container.items.length;
+    var pct = total ? Math.round(packed / total * 100) : 0;
+
+    var nameInput = el("input", {
+      type: "text", class: "name", value: container.name, maxlength: "40",
+      "aria-label": "入れ物の名前"
+    });
+    nameInput.addEventListener("change", function () {
+      container.name = nameInput.value.trim() || "名前のない入れ物";
+      save(); render();
+    });
+
+    var head = el("div", { class: "container-head" }, [
+      nameInput,
+      el("div", { class: "container-progress" }, [
+        el("div", { class: "total-num", text: packed + " / " + total }),
+        el("div", { class: "bar" }, [el("i", { style: "width:" + pct + "%" })])
+      ]),
+      el("button", {
+        class: "icon", type: "button", text: "入れ物を削除",
+        onclick: function () {
+          if (total && !confirm("「" + container.name + "」と中の持ち物 " + total + " 件を削除します。よろしいですか？")) return;
+          state.containers = state.containers.filter(function (c) { return c.id !== container.id; });
+          save(); render();
+        }
+      })
+    ]);
+
+    var list = el("ul", { class: "items" });
+    if (!total) {
+      list.appendChild(el("li", {}, [el("p", { class: "empty", text: "まだ持ち物がありません。" })]));
+    } else if (!visible.length) {
+      list.appendChild(el("li", {}, [el("p", { class: "empty", text: "絞り込み条件に合う持ち物はありません。" })]));
+    } else {
+      visible.forEach(function (item) {
+        list.appendChild(renderItem(container, item));
+      });
+    }
+
+    var card = el("section", { class: "panel container-card" }, [head, list, renderAddItem(container)]);
+    return card;
+  }
+
+  function renderItem(container, item) {
+    var check = el("input", { type: "checkbox", "aria-label": item.name });
+    check.checked = item.packed;
+    check.addEventListener("change", function () {
+      item.packed = check.checked;
+      save(); render();
+    });
+
+    var meta = el("div", { class: "item-meta" });
+    item.tags.forEach(function (t) {
+      meta.appendChild(tagChip(t, function () {
+        item.tags = item.tags.filter(function (x) { return x !== t; });
+        save(); render();
+      }));
+    });
+
+    // 未付与のタグを選んで追加する
+    var remaining = state.tags.filter(function (t) { return item.tags.indexOf(t.name) === -1; });
+    if (remaining.length) {
+      var sel = el("select", { "aria-label": "タグを追加" }, [el("option", { value: "", text: "＋ タグ" })]);
+      remaining.forEach(function (t) { sel.appendChild(el("option", { value: t.name, text: t.name })); });
+      sel.style.fontSize = ".73rem";
+      sel.style.padding = "1px 4px";
+      sel.addEventListener("change", function () {
+        if (!sel.value) return;
+        item.tags.push(sel.value);
+        save(); render();
+      });
+      meta.appendChild(sel);
+    }
+
+    var body = el("div", { class: "item-body" }, [
+      el("div", {}, [
+        el("span", { class: "item-name", text: item.name }),
+        item.qty > 1 ? el("span", { class: "qty", text: "×" + item.qty }) : null
+      ]),
+      meta
+    ]);
+
+    // 別の入れ物へ移す
+    var move = el("select", { "aria-label": "入れ物を移動" }, [el("option", { value: "", text: "移動" })]);
+    state.containers.forEach(function (c) {
+      if (c.id !== container.id) move.appendChild(el("option", { value: c.id, text: "→ " + c.name }));
+    });
+    move.addEventListener("change", function () {
+      var target = findContainer(move.value);
+      if (!target) return;
+      container.items = container.items.filter(function (i) { return i.id !== item.id; });
+      target.items.push(item);
+      save(); render();
+    });
+
+    var actions = el("div", { class: "item-actions" }, [
+      state.containers.length > 1 ? move : null,
+      el("button", {
+        class: "icon", type: "button", title: "削除", text: "×",
+        onclick: function () {
+          container.items = container.items.filter(function (i) { return i.id !== item.id; });
+          save(); render();
+        }
+      })
+    ]);
+
+    return el("li", { class: item.packed ? "packed" : "" }, [check, body, actions]);
+  }
+
+  function renderAddItem(container) {
+    var name = el("input", { type: "text", class: "grow", placeholder: "持ち物を追加", maxlength: "60" });
+    var qty = el("input", { type: "number", min: "1", value: "1", "aria-label": "個数" });
+    var tagSel = el("select", { "aria-label": "ジャンル" }, [el("option", { value: "", text: "タグなし" })]);
+    state.tags.forEach(function (t) { tagSel.appendChild(el("option", { value: t.name, text: t.name })); });
+    // 絞り込み中のタグを初期値にしておくと、続けて追加しやすい
+    if (activeTags.length === 1) tagSel.value = activeTags[0];
+
+    function add() {
+      var value = name.value.trim();
+      if (!value) { name.focus(); return; }
+      container.items.push({
+        id: uid(),
+        name: value,
+        qty: Math.max(1, Math.floor(Number(qty.value) || 1)),
+        packed: false,
+        tags: tagSel.value ? [tagSel.value] : []
+      });
+      save();
+      var keepTag = tagSel.value;
+      render();
+      // 再描画後の同じ入れ物の入力欄にフォーカスを戻す
+      var next = document.querySelector('[data-add-for="' + container.id + '"] input[type=text]');
+      if (next) {
+        next.focus();
+        var nextTag = document.querySelector('[data-add-for="' + container.id + '"] select');
+        if (nextTag) nextTag.value = keepTag;
+      }
+    }
+
+    name.addEventListener("keydown", function (e) { if (e.key === "Enter") add(); });
+    qty.addEventListener("keydown", function (e) { if (e.key === "Enter") add(); });
+
+    return el("div", { class: "add-item row", "data-add-for": container.id }, [
+      name, qty, tagSel,
+      el("button", { type: "button", class: "primary", text: "追加", onclick: add })
+    ]);
+  }
+
+  function renderTotals() {
+    var total = 0, packed = 0;
+    state.containers.forEach(function (c) {
+      total += c.items.length;
+      packed += c.items.filter(function (i) { return i.packed; }).length;
+    });
+    document.getElementById("total-num").textContent = packed + " / " + total;
+    document.getElementById("total-bar").style.width = (total ? Math.round(packed / total * 100) : 0) + "%";
+  }
+
+  function render() {
+    renderTotals();
+    renderTagFilters();
+
+    var hint = document.getElementById("filter-hint");
+    hint.textContent = activeTags.length
+      ? "絞り込み中: " + activeTags.join(" / ") + "（もう一度クリックで解除）"
+      : "タグをクリックすると、そのタグの持ち物だけを表示します。";
+
+    var box = document.getElementById("containers");
+    box.textContent = "";
+    if (!state.containers.length) {
+      box.appendChild(el("section", { class: "panel" }, [
+        el("p", { class: "empty", text: "入れ物がありません。上のフォームから追加してください。" })
+      ]));
+      return;
+    }
+    state.containers.forEach(function (c) { box.appendChild(renderContainer(c)); });
+  }
+
+  /* ---------- 画面上部の操作 ---------- */
+
+  function addContainer() {
+    var input = document.getElementById("new-container");
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    state.containers.push({ id: uid(), name: name, items: [] });
+    input.value = "";
+    save(); render();
+  }
+
+  document.getElementById("add-container").addEventListener("click", addContainer);
+  document.getElementById("new-container").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addContainer();
+  });
+
+  function addTag() {
+    var input = document.getElementById("new-tag");
+    var color = document.getElementById("new-tag-color").value;
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    if (state.tags.some(function (t) { return t.name === name; })) {
+      alert("同じ名前のタグがすでにあります。");
+      return;
+    }
+    state.tags.push({ name: name, color: color });
+    input.value = "";
+    save(); render();
+  }
+
+  document.getElementById("add-tag").addEventListener("click", addTag);
+  document.getElementById("new-tag").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addTag();
+  });
+
+  document.getElementById("search").addEventListener("input", function (e) {
+    query = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  document.getElementById("export").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = el("a", { href: url, download: "packing-checklist.json" });
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("import-btn").addEventListener("click", function () {
+    document.getElementById("import-file").click();
+  });
+
+  document.getElementById("import-file").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        state = normalize(JSON.parse(String(reader.result)));
+        activeTags = [];
+        save(); render();
+      } catch (err) {
+        alert("読み込めませんでした。書き出したJSONファイルを選んでください。");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("uncheck-all").addEventListener("click", function () {
+    if (!confirm("すべてのチェックを外します。よろしいですか？")) return;
+    state.containers.forEach(function (c) {
+      c.items.forEach(function (i) { i.packed = false; });
+    });
+    save(); render();
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    if (!confirm("入れ物と持ち物をすべて削除して初期状態に戻します。よろしいですか？")) return;
+    state = defaultState();
+    activeTags = [];
+    query = "";
+    document.getElementById("search").value = "";
+    save(); render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
