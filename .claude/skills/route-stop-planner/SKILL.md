@@ -99,6 +99,9 @@ means writing data — never a new page.
   relative to a given route.
 - A stop that is only worth visiting for certain onward plans gets
   `"optional": true` on the leg.
+- Every stop needs a real `lat`/`lon`. The map view plots from them, so a
+  guessed coordinate puts a town in the wrong valley — look it up rather than
+  estimating from the highway.
 - `recommended` and `popular` answer different questions and must not be
   merged. `recommended` is a claim about supplies — the reader can finish
   their shopping here. `popular` only says the place is well known, which is
@@ -124,5 +127,20 @@ the reader's last route in `localStorage`. Stops render collapsed to one row
 each — milepost, name, and a fuel/grocery/pharmacy status chip — so the whole
 corridor fits on one screen; the row expands to the notes and店舗詳細 on click.
 Keep new per-stop copy short enough to live in that expanded panel rather than
-widening the collapsed row. Change it only for behaviour that
+widening the collapsed row.
+
+The 地図 view is the second way to pick a route. It projects the stops'
+`lat`/`lon` (equirectangular, longitudes squeezed by cos of the mean latitude)
+and draws each route through them, so it shows real relative positions — but
+straight segments between stops, not road geometry, which the caption says out
+loud. Two details make it work and are worth preserving when editing:
+
+- A `detour` leg is drawn as a dashed spur off the last on-route stop instead
+  of bending the corridor through it, which is what makes Panguitch and Kanab
+  read as side trips.
+- Routes that share a trunk (A, C and D are identical apart from their spurs)
+  would otherwise be indistinguishable to a click. Each route's click target
+  is the geometry no other route has; a route with none — the plain trunk —
+  keeps its whole line. Adding a route that duplicates another's geometry
+  exactly will make one of them unselectable on the map. Change it only for behaviour that
 every corridor needs; anything corridor-specific belongs in the dataset.

@@ -36,6 +36,11 @@ for (const file of targets) {
 
   for (const [id, stop] of Object.entries(d.stops ?? {})) {
     if (!stop.name) errors.push(`stop "${id}": missing name`);
+    // The map view plots stops from these, so a stop without them silently
+    // vanishes from the corridor it belongs to.
+    if (typeof stop.lat !== "number" || typeof stop.lon !== "number") {
+      errors.push(`stop "${id}": needs numeric lat/lon — the map view plots from them`);
+    }
     for (const key of AMENITIES) {
       const a = stop.amenities?.[key];
       if (!a) {

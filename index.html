@@ -18,6 +18,7 @@
     --warn-soft: #f7ece2;
     --info: #2f5d86;
     --info-soft: #e6edf4;
+    --r1: #17663f; --r2: #2f5d86; --r3: #7a3f86; --r4: #9a6a12;
     --off: #eceeeb;
     --shield: #24302a;
     --shadow: 0 1px 2px rgba(27,33,30,.07), 0 6px 18px rgba(27,33,30,.05);
@@ -42,6 +43,7 @@
       --warn-soft: #33261a;
       --info: #8ab6dc;
       --info-soft: #1b2a37;
+      --r1: #57b485; --r2: #8ab6dc; --r3: #c193cc; --r4: #d6ab54;
       --off: #262c2a;
       --shield: #e8ebe9;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
@@ -64,10 +66,13 @@
     --warn-soft: #33261a;
     --info: #8ab6dc;
     --info-soft: #1b2a37;
+    --r1: #57b485; --r2: #8ab6dc; --r3: #c193cc; --r4: #d6ab54;
     --off: #262c2a;
     --shield: #e8ebe9;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
   }
+
+  [hidden] { display: none !important; }
 
   body {
     margin: 0;
@@ -93,12 +98,13 @@
   /* ---- route switch ---- */
   .switch-bar {
     position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    display: flex; align-items: center; gap: 10px;
     background: color-mix(in srgb, var(--ground) 92%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--rule);
     margin-inline: -16px; padding: 10px 16px;
   }
-  .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
     display: flex; align-items: center; gap: 9px; flex: 0 0 auto;
@@ -112,8 +118,18 @@
   .shield {
     font-family: var(--f-display); font-weight: 800; font-size: 13px;
     width: 24px; height: 24px; display: grid; place-items: center;
-    border: 2px solid currentColor; border-radius: 2px; flex: 0 0 auto;
+    border: 2px solid var(--sc, currentColor); border-radius: 2px; flex: 0 0 auto;
   }
+  .tab[aria-selected="true"] .shield { border-color: currentColor; }
+
+  .views { display: flex; flex: 0 0 auto; border: 1px solid var(--rule-strong); border-radius: 3px; overflow: hidden; }
+  .vbtn {
+    background: var(--panel); color: var(--ink-2); border: 0; cursor: pointer;
+    font-family: var(--f-body); font-size: 12.5px; padding: 6px 11px; white-space: nowrap;
+  }
+  .vbtn + .vbtn { border-left: 1px solid var(--rule-strong); }
+  .vbtn[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .vbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .tab-name { font-weight: 600; white-space: nowrap; }
   .tab-meta { font-size: 11px; opacity: .72; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -218,6 +234,23 @@
   .a[data-s="no"] { background: var(--off); border-left: 3px solid var(--rule-strong); }
   .a[data-s="no"] .a-v, .a[data-s="no"] .a-k { color: var(--ink-3); }
 
+  /* ---- map ---- */
+  .map-wrap { overflow-x: auto; margin-top: 4px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .map-wrap svg { display: block; width: 100%; min-width: 640px; height: auto; }
+  .map-wrap .hit { cursor: pointer; }
+  .map-wrap [data-stop] { cursor: pointer; }
+  .map-foot {
+    display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline;
+    margin-top: 10px; font-size: 12px; color: var(--ink-3);
+  }
+  .mapinfo { margin-top: 14px; }
+  .mapinfo-hint { color: var(--ink-3); font-size: 13px; margin: 0; }
+  .mapinfo h3 {
+    font-family: var(--f-display); font-weight: 800; font-size: 17px; margin: 0 0 2px;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .mapinfo .coord { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
   footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
   footer a { color: var(--ink-2); }
   .err { padding: 16px; border-left: 3px solid var(--warn); background: var(--warn-soft); margin-top: 24px; }
@@ -240,6 +273,7 @@
     .mile { padding-right: 12px; font-size: 12px; }
     .amen { grid-template-columns: 1fr; }
     .stop-en { display: none; }
+    .vbtn { padding: 6px 8px; font-size: 12px; }
     .flag { font-size: 9.5px; padding: 1px 4px; }
     .legend { margin-left: 0; }
   }
@@ -255,6 +289,10 @@
 
   <div class="switch-bar">
     <div class="tabs" role="tablist" aria-label="ルート選択" id="tabs"></div>
+    <div class="views">
+      <button type="button" class="vbtn" id="v-list" aria-pressed="true">リスト</button>
+      <button type="button" class="vbtn" id="v-map" aria-pressed="false">地図</button>
+    </div>
   </div>
 
   <section class="summary" id="summary" aria-live="polite"></section>
@@ -271,6 +309,12 @@
   </div>
 
   <ul class="stops" id="stops"></ul>
+
+  <section id="mapview" hidden>
+    <div class="map-wrap" id="map-wrap"></div>
+    <div class="map-foot" id="map-foot"></div>
+    <div class="mapinfo" id="mapinfo"></div>
+  </section>
 
   <footer id="footer"></footer>
 </div>
@@ -306,6 +350,7 @@
     var el = document.getElementById("tabs");
     el.innerHTML = data.routes.map(function (r) {
       return '<button class="tab" role="tab" id="tab-' + esc(r.id) + '" data-id="' + esc(r.id) + '" ' +
+        'style="--sc:' + routeColor(r.id) + '" ' +
         'aria-selected="' + (r.id === current ? "true" : "false") + '" tabindex="' + (r.id === current ? "0" : "-1") + '">' +
         '<span class="shield">' + esc(r.id) + '</span>' +
         '<span><span class="tab-name">' + esc(r.nameJa || r.name) + '</span><br>' +
@@ -427,6 +472,241 @@
     b.textContent = open ? "すべて閉じる" : "すべて開く";
   }
 
+
+  /* ---------- map ---------- */
+  var ROUTE_VARS = ["--r1", "--r2", "--r3", "--r4"];
+  var MAP = null, pickedStop = null;
+
+  function routeColor(id) {
+    var i = data.routes.findIndex(function (r) { return r.id === id; });
+    return "var(" + ROUTE_VARS[(i < 0 ? 0 : i) % ROUTE_VARS.length] + ")";
+  }
+
+  // Equirectangular, with longitudes squeezed by cos(mean latitude). Over a
+  // corridor this shallow it is indistinguishable from Mercator and keeps the
+  // mileage per vertical unit constant, which the scale bar relies on.
+  var MI_PER_DEG_LAT = 69.05;
+
+  function buildMap() {
+    var used = {};
+    data.routes.forEach(function (r) { r.legs.forEach(function (l) { used[l.stop] = 1; }); });
+    var pts = Object.keys(used).map(function (id) { return data.stops[id]; })
+      .filter(function (s) { return s && typeof s.lat === "number" && typeof s.lon === "number"; });
+    if (!pts.length) return null;
+    var lat = pts.map(function (s) { return s.lat; }), lon = pts.map(function (s) { return s.lon; });
+    var latMin = Math.min.apply(null, lat), latMax = Math.max.apply(null, lat);
+    var lonMin = Math.min.apply(null, lon), lonMax = Math.max.apply(null, lon);
+    var k = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
+    var W = 1000, PAD = 84;
+    var scale = (W - PAD * 2) / ((lonMax - lonMin) * k);
+    MAP = {
+      W: W, H: (latMax - latMin) * scale + PAD * 2, scale: scale,
+      x: function (lon2) { return PAD + (lon2 - lonMin) * k * scale; },
+      y: function (lat2) { return PAD + (latMax - lat2) * scale; }
+    };
+    return MAP;
+  }
+
+  // Segments of one route. A detour leg hangs off the last on-route stop (and
+  // chains to the previous detour stop when several run together), so a side
+  // trip reads as a spur instead of bending the corridor through it.
+  function routeSegments(r) {
+    var segs = [], lastMain = null, lastAny = null;
+    r.legs.forEach(function (leg) {
+      var s = data.stops[leg.stop];
+      if (!s || typeof s.lat !== "number") return;
+      var node = { id: leg.stop, s: s };
+      if (leg.detour) {
+        if (lastAny) segs.push({ a: lastAny, b: node, dashed: true });
+        lastAny = node;
+      } else {
+        if (lastMain) segs.push({ a: lastMain, b: node, dashed: false });
+        lastMain = node; lastAny = node;
+      }
+    });
+    segs.forEach(function (g) {
+      g.key = g.a.id < g.b.id ? g.a.id + "|" + g.b.id : g.b.id + "|" + g.a.id;
+    });
+    return segs;
+  }
+
+  // Routes A, C and D share the whole US-89 trunk and differ only by their
+  // resupply spurs, so a click target drawn over the trunk could not tell them
+  // apart. Each route is therefore clickable on the geometry no other route
+  // has; a route with none (the plain trunk) keeps its whole line.
+  function hitSegments(r, all) {
+    var mine = all[r.id];
+    var unique = mine.filter(function (g) {
+      return !data.routes.some(function (o) {
+        return o.id !== r.id && all[o.id].some(function (h) { return h.key === g.key; });
+      });
+    });
+    return unique.length ? unique : mine;
+  }
+
+  function segPath(g) {
+    return "M" + MAP.x(g.a.s.lon).toFixed(1) + " " + MAP.y(g.a.s.lat).toFixed(1) +
+           "L" + MAP.x(g.b.s.lon).toFixed(1) + " " + MAP.y(g.b.s.lat).toFixed(1);
+  }
+
+  function textW(t, size) {
+    var w = 0;
+    for (var i = 0; i < t.length; i++) w += t.charCodeAt(i) > 0x2e80 ? 1 : 0.56;
+    return w * size;
+  }
+
+  function renderMap() {
+    if (!MAP && !buildMap()) return;
+    var svg = [], boxes = [];
+    var all = {};
+    data.routes.forEach(function (r) { all[r.id] = routeSegments(r); });
+
+    function fits(b) {
+      if (b.x < 4 || b.y < 4 || b.x + b.w > MAP.W - 4 || b.y + b.h > MAP.H - 4) return false;
+      return !boxes.some(function (o) {
+        return b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y;
+      });
+    }
+
+    // lines — the selected route is drawn last so it sits on top of the others
+    data.routes.slice().sort(function (a, b) {
+      return (a.id === current ? 1 : 0) - (b.id === current ? 1 : 0);
+    }).forEach(function (r) {
+      var on = r.id === current, col = routeColor(r.id);
+      all[r.id].forEach(function (g) {
+        svg.push('<path d="' + segPath(g) + '" fill="none" stroke="' + col +
+          '" stroke-width="' + (on ? 5 : 2) + '" stroke-linecap="round"' +
+          (g.dashed ? ' stroke-dasharray="' + (on ? "9 7" : "5 5") + '"' : "") +
+          ' opacity="' + (on ? 1 : 0.3) + '"/>');
+      });
+    });
+
+    // click targets
+    data.routes.forEach(function (r) {
+      hitSegments(r, all).forEach(function (g) {
+        svg.push('<path class="hit" d="' + segPath(g) + '" fill="none" stroke="transparent" ' +
+          'stroke-width="24" data-route="' + esc(r.id) + '"><title>' + esc(r.nameJa || r.name) + '</title></path>');
+      });
+    });
+
+    // route badges, placed on the geometry that identifies each route
+    data.routes.forEach(function (r) {
+      var segs = hitSegments(r, all), best = null, bl = -1;
+      segs.forEach(function (g) {
+        var ax = MAP.x(g.a.s.lon), ay = MAP.y(g.a.s.lat), bx = MAP.x(g.b.s.lon), by = MAP.y(g.b.s.lat);
+        var len = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+        if (len > bl) { bl = len; best = [(ax + bx) / 2, (ay + by) / 2]; }
+      });
+      if (!best) return;
+      var on = r.id === current, sz = 30;
+      var b = { x: best[0] - sz / 2, y: best[1] - sz / 2, w: sz, h: sz };
+      for (var t = 0; t < 8 && !fits(b); t++) { b.x += 16; b.y -= 10; }
+      boxes.push(b);
+      svg.push('<g class="hit" data-route="' + esc(r.id) + '">' +
+        '<rect x="' + b.x.toFixed(1) + '" y="' + b.y.toFixed(1) + '" width="' + sz + '" height="' + sz +
+        '" rx="3" fill="' + (on ? routeColor(r.id) : "var(--panel)") + '" stroke="' + routeColor(r.id) + '" stroke-width="2.5"/>' +
+        '<text x="' + (b.x + sz / 2).toFixed(1) + '" y="' + (b.y + sz / 2 + 7).toFixed(1) + '" text-anchor="middle" ' +
+        'font-size="20" font-weight="800" fill="' + (on ? "var(--ground)" : routeColor(r.id)) + '">' + esc(r.id) + '</text>' +
+        '<title>' + esc(r.nameJa || r.name) + '</title></g>');
+    });
+
+    // stops of the selected route, coloured by what you can actually buy there
+    var TIER_FILL = { full: "var(--accent)", partial: "var(--warn)", none: "var(--rule-strong)" };
+    var sel = route();
+    sel.legs.forEach(function (leg) {
+      var st = data.stops[leg.stop];
+      if (!st || typeof st.lat !== "number") return;
+      var cx = MAP.x(st.lon), cy = MAP.y(st.lat), t = tier(st);
+      var r0 = t === "full" ? 9 : 7;
+      var picked = pickedStop === leg.stop;
+      svg.push('<circle data-stop="' + esc(leg.stop) + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) +
+        '" r="' + (picked ? r0 + 4 : r0) + '" fill="' + TIER_FILL[t] + '" stroke="var(--ground)" stroke-width="3"/>' +
+        '<circle data-stop="' + esc(leg.stop) + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) +
+        '" r="16" fill="transparent"><title>' + esc(st.nameJa || st.name) + '</title></circle>');
+
+      var label = st.nameJa || st.name, fs = 19;
+      var w = textW(label, fs), h = fs + 8;
+      var cands = [
+        { x: cx + 15, y: cy - h / 2, anchor: "start", tx: cx + 15 },
+        { x: cx - 15 - w, y: cy - h / 2, anchor: "end", tx: cx - 15 },
+        { x: cx - w / 2, y: cy - 17 - h, anchor: "middle", tx: cx },
+        { x: cx - w / 2, y: cy + 17, anchor: "middle", tx: cx },
+        { x: cx + 13, y: cy - 13 - h, anchor: "start", tx: cx + 13 },
+        { x: cx + 13, y: cy + 13, anchor: "start", tx: cx + 13 },
+        { x: cx - 13 - w, y: cy - 13 - h, anchor: "end", tx: cx - 13 },
+        { x: cx - 13 - w, y: cy + 13, anchor: "end", tx: cx - 13 }
+      ];
+      for (var i = 0; i < cands.length; i++) {
+        var c = cands[i], box = { x: c.x, y: c.y, w: w, h: h };
+        if (!fits(box)) continue;
+        boxes.push(box);
+        svg.push('<text data-stop="' + esc(leg.stop) + '" x="' + c.tx.toFixed(1) + '" y="' + (c.y + fs).toFixed(1) +
+          '" text-anchor="' + c.anchor + '" font-size="' + fs + '" font-weight="' + (picked ? 800 : 600) +
+          '" fill="' + (picked ? "var(--ink)" : "var(--ink-2)") + '" paint-order="stroke" ' +
+          'stroke="var(--ground)" stroke-width="4" stroke-linejoin="round">' + esc(label) + '</text>');
+        break;
+      }
+    });
+
+    // scale bar and north arrow
+    var pxPerMi = MAP.scale / MI_PER_DEG_LAT;
+    var miles = [5, 10, 20, 25, 50, 100].filter(function (m) { return m * pxPerMi >= 95; })[0] || 100;
+    var len = miles * pxPerMi, bx = 20, by = MAP.H - 26;
+    svg.push('<g fill="var(--ink-3)" stroke="var(--ink-3)">' +
+      '<path d="M' + bx + ' ' + (by - 5) + 'v10M' + bx + ' ' + by + 'h' + len.toFixed(1) +
+      'M' + (bx + len).toFixed(1) + ' ' + (by - 5) + 'v10" stroke-width="2"/>' +
+      '<text x="' + (bx + len / 2).toFixed(1) + '" y="' + (by - 10) + '" text-anchor="middle" font-size="16" stroke="none">' +
+      miles + ' mi / ' + Math.round(miles * 1.609) + ' km</text></g>');
+    svg.push('<g fill="var(--ink-3)"><path d="M' + (MAP.W - 34) + ' 46 l7 18 -7 -5 -7 5 z"/>' +
+      '<text x="' + (MAP.W - 34) + '" y="34" text-anchor="middle" font-size="15" font-weight="700">N</text></g>');
+
+    document.getElementById("map-wrap").innerHTML =
+      '<svg viewBox="0 0 ' + MAP.W + ' ' + Math.round(MAP.H) + '" role="img" ' +
+      'aria-label="ザイオンからブライスキャニオンまでの各ルートと経由地の位置関係">' + svg.join("") + '</svg>';
+
+    document.getElementById("map-foot").innerHTML =
+      '<span>地点は実データの緯度経度。線は地点どうしを直線で結んだ模式図で、道路の形状そのものではありません。</span>' +
+      '<span>破線 = 本線から外れる寄り道</span>' +
+      '<span>ルートの線か記号を選ぶと切り替わります</span>';
+
+    renderMapInfo();
+  }
+
+  function renderMapInfo() {
+    var el = document.getElementById("mapinfo");
+    var st = pickedStop && data.stops[pickedStop];
+    if (!st) {
+      el.innerHTML = '<p class="mapinfo-hint">地点の丸を選ぶと、その町の補給状況がここに出ます。'
+        + '丸の色は 緑＝3つ揃う / 橙＝一部 / 灰＝補給なし。</p>';
+      return;
+    }
+    var amen = KEYS.map(function (k) {
+      var a = (st.amenities || {})[k] || { status: "unknown" };
+      var d = amenityBlock(a);
+      return '<div class="a" data-s="' + esc(a.status || "unknown") + '">' +
+        '<span class="a-k">' + LABELS[k] + '</span>' +
+        '<span class="a-v">' + (STATUS[a.status] || STATUS.unknown) + '</span>' +
+        (d ? '<span class="a-d">' + esc(d) + '</span>' : "") + '</div>';
+    }).join("");
+    el.innerHTML = '<h3>' + esc(st.nameJa || st.name) +
+      '<span class="coord">' + st.lat.toFixed(4) + ', ' + st.lon.toFixed(4) + '</span></h3>' +
+      (st.noteJa ? '<p class="stop-note">' + esc(st.noteJa) + '</p>' : "") +
+      '<div class="amen">' + amen + '</div>';
+  }
+
+  function setView(v) {
+    var map = v === "map";
+    document.getElementById("mapview").hidden = !map;
+    document.getElementById("stops").hidden = map;
+    document.querySelector(".controls").hidden = map;
+    document.getElementById("v-map").setAttribute("aria-pressed", map ? "true" : "false");
+    document.getElementById("v-list").setAttribute("aria-pressed", map ? "false" : "true");
+    try { localStorage.setItem("view:" + data.id, v); } catch (e) {}
+    if (map) renderMap();
+  }
+
+  function mapIsOpen() { return !document.getElementById("mapview").hidden; }
+
   function select(id) {
     current = id;
     try { localStorage.setItem("route:" + data.id, id); } catch (e) {}
@@ -437,6 +717,7 @@
     });
     renderSummary();
     renderStops();
+    if (mapIsOpen()) renderMap();
   }
 
   function renderFooter() {
@@ -462,12 +743,27 @@
     renderFooter();
     document.getElementById("f-full").addEventListener("change", renderStops);
     document.getElementById("f-services").addEventListener("change", renderStops);
+    document.getElementById("v-list").addEventListener("click", function () { setView("list"); });
+    document.getElementById("v-map").addEventListener("click", function () { setView("map"); });
+    document.getElementById("map-wrap").addEventListener("click", function (e) {
+      var stopEl = e.target.closest("[data-stop]");
+      if (stopEl) {
+        pickedStop = pickedStop === stopEl.dataset.stop ? null : stopEl.dataset.stop;
+        renderMap();
+        return;
+      }
+      var hit = e.target.closest("[data-route]");
+      if (hit && hit.dataset.route !== current) { pickedStop = null; select(hit.dataset.route); }
+    });
     document.getElementById("expand-all").addEventListener("click", function () {
       var open = this.getAttribute("aria-expanded") !== "true";
       Array.prototype.forEach.call(document.querySelectorAll(".stops .row"), function (b) { toggle(b, open); });
       setExpandAll(open);
     });
     select(current);
+    var view = null;
+    try { view = localStorage.getItem("view:" + d.id); } catch (e) {}
+    setView(view === "map" ? "map" : "list");
   }
 
   fetch(src)
