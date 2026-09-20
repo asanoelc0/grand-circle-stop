@@ -110,5 +110,9 @@ detour actually costs in miles and minutes. Skip scenery and history.
 
 `index.html` is corridor-agnostic — it reads `?data=data/<id>.json`
 (default `data/zion-bryce.json`), builds the tabs from `routes`, and remembers
-the reader's last route in `localStorage`. Change it only for behaviour that
+the reader's last route in `localStorage`. Stops render collapsed to one row
+each — milepost, name, and a fuel/grocery/pharmacy status chip — so the whole
+corridor fits on one screen; the row expands to the notes and店舗詳細 on click.
+Keep new per-stop copy short enough to live in that expanded panel rather than
+widening the collapsed row. Change it only for behaviour that
 every corridor needs; anything corridor-specific belongs in the dataset.
