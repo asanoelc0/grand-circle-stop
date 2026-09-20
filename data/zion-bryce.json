@@ -23,7 +23,10 @@
     "https://www.utah.com/destinations/cities-towns/panguitch/",
     "https://www.clarkscountrymarket.com/",
     "https://www.whitemountaintradingpost.com/shell-gas-convenience-store",
-    "https://udottraffic.utah.gov/"
+    "https://udottraffic.utah.gov/",
+    "https://www.fs.usda.gov/r04/dixie/recreation/red-canyon-visitor-center",
+    "https://www.yelp.com/biz/brian-head-general-store-brian-head",
+    "https://www.nps.gov/cebr/planyourvisit/conditions.htm"
   ],
   "routes": [
     {
@@ -74,12 +77,22 @@
           "mile": 68
         },
         {
+          "stop": "red-canyon",
+          "mile": 72,
+          "optional": true
+        },
+        {
           "stop": "bryce-canyon-city",
           "mile": 82
         },
         {
           "stop": "tropic",
           "mile": 90,
+          "optional": true
+        },
+        {
+          "stop": "cannonville",
+          "mile": 98,
           "optional": true
         }
       ]
@@ -94,7 +107,8 @@
       "warningsJa": [
         "UT-14 は標高約 9,900ft(3,000m) のシーダーブレイクス付近を越える。冬季は積雪・チェーン規制・一時閉鎖あり（udottraffic.utah.gov で要確認）。",
         "距離はルート A の約 1.8 倍。所要 3〜3.5 時間。",
-        "急勾配区間があるため牽引車はブレーキ・水温に注意。"
+        "急勾配区間があるため牽引車はブレーキ・水温に注意。",
+        "シーダーブレイクスへ寄る UT-148 はおおむね 11〜5月閉鎖。ブライアンヘッドの給油は 91 無鉛 1基のみなので、給油はシーダーシティで済ませること。"
       ],
       "legs": [
         {
@@ -126,6 +140,20 @@
           "mile": 76
         },
         {
+          "stop": "cedar-breaks",
+          "mile": 97,
+          "detour": true,
+          "detourMi": 12,
+          "optional": true
+        },
+        {
+          "stop": "brian-head",
+          "mile": 100,
+          "detour": true,
+          "detourMi": 20,
+          "optional": true
+        },
+        {
           "stop": "duck-creek-village",
           "mile": 105
         },
@@ -142,12 +170,22 @@
           "mile": 138
         },
         {
+          "stop": "red-canyon",
+          "mile": 142,
+          "optional": true
+        },
+        {
           "stop": "bryce-canyon-city",
           "mile": 152
         },
         {
           "stop": "tropic",
           "mile": 160,
+          "optional": true
+        },
+        {
+          "stop": "cannonville",
+          "mile": 168,
           "optional": true
         }
       ]
@@ -203,12 +241,22 @@
           "detourMi": 14
         },
         {
+          "stop": "red-canyon",
+          "mile": 86,
+          "optional": true
+        },
+        {
           "stop": "bryce-canyon-city",
           "mile": 96
         },
         {
           "stop": "tropic",
           "mile": 104,
+          "optional": true
+        },
+        {
+          "stop": "cannonville",
+          "mile": 112,
           "optional": true
         }
       ]
@@ -264,12 +312,22 @@
           "mile": 102
         },
         {
+          "stop": "red-canyon",
+          "mile": 106,
+          "optional": true
+        },
+        {
           "stop": "bryce-canyon-city",
           "mile": 116
         },
         {
           "stop": "tropic",
           "mile": 124,
+          "optional": true
+        },
+        {
+          "stop": "cannonville",
+          "mile": 132,
           "optional": true
         }
       ]
@@ -304,7 +362,8 @@
           "status": "no",
           "noteJa": "薬局なし。Sol Foods で市販薬が少し買える程度。最寄りは Hurricane（約23mi）。"
         }
-      }
+      },
+      "popular": true
     },
     "rockville": {
       "name": "Rockville",
@@ -467,7 +526,8 @@
             "Smith's Pharmacy"
           ]
         }
-      }
+      },
+      "popular": true
     },
     "duck-creek-village": {
       "name": "Duck Creek Village",
@@ -492,7 +552,8 @@
         "pharmacy": {
           "status": "no"
         }
-      }
+      },
+      "popular": true
     },
     "zion-east-entrance": {
       "name": "Zion East Entrance",
@@ -511,7 +572,8 @@
         "pharmacy": {
           "status": "no"
         }
-      }
+      },
+      "popular": true
     },
     "mt-carmel-junction": {
       "name": "Mt. Carmel Junction",
@@ -537,7 +599,8 @@
         "pharmacy": {
           "status": "no"
         }
-      }
+      },
+      "popular": true
     },
     "orderville": {
       "name": "Orderville",
@@ -693,7 +756,8 @@
           "hours": "月–土 8:00–18:00 / 日曜休",
           "noteJa": "Garfield Memorial Hospital も町内にあり、医療面の保険としても重要。"
         }
-      }
+      },
+      "popular": true
     },
     "bryce-canyon-city": {
       "name": "Bryce Canyon City",
@@ -722,7 +786,8 @@
           "status": "no",
           "noteJa": "市販薬が General Store に少しある程度。"
         }
-      }
+      },
+      "popular": true
     },
     "tropic": {
       "name": "Tropic",
@@ -752,7 +817,9 @@
         "pharmacy": {
           "status": "no"
         }
-      }
+      },
+      "popular": true,
+      "recommended": true
     },
     "kanab": {
       "name": "Kanab",
@@ -786,6 +853,100 @@
             "Kanab Pharmacy",
             "Kane County Hospital 併設薬局"
           ]
+        }
+      },
+      "popular": true
+    },
+    "red-canyon": {
+      "name": "Red Canyon",
+      "nameJa": "レッドキャニオン",
+      "kind": "poi",
+      "lat": 37.7433,
+      "lon": -112.3086,
+      "popular": true,
+      "noteJa": "UT-12 が赤い岩をくり抜いたアーチをくぐる、ブログ・写真で定番の区間。Bryce Junction から 3.5mi、公園まであと 13mi。ビジターセンター（春〜晩秋のみ）に水・トイレ・ピクニック場、向かいにキャンプ場。売店は土産と地図程度。",
+      "amenities": {
+        "fuel": {
+          "status": "no"
+        },
+        "grocery": {
+          "status": "no",
+          "noteJa": "ビジターセンターで土産・書籍のみ。飲料水の給水はできる。"
+        },
+        "pharmacy": {
+          "status": "no"
+        }
+      }
+    },
+    "cannonville": {
+      "name": "Cannonville",
+      "nameJa": "キャノンビル",
+      "kind": "village",
+      "population": 170,
+      "lat": 37.5686,
+      "lon": -112.0578,
+      "popular": true,
+      "noteJa": "トロピックの 8mi 先。コダクロームベイスン州立公園への分岐で、ブログでは必ず名前が出る。町自体に商業施設はほぼ無く、買い物はトロピックで済ませること。",
+      "amenities": {
+        "fuel": {
+          "status": "no",
+          "noteJa": "最寄りはトロピックの Clark's。"
+        },
+        "grocery": {
+          "status": "limited",
+          "noteJa": "州立公園内に小さな売店がある程度。"
+        },
+        "pharmacy": {
+          "status": "no"
+        }
+      }
+    },
+    "cedar-breaks": {
+      "name": "Cedar Breaks NM",
+      "nameJa": "シーダーブレイクス国定公園",
+      "kind": "poi",
+      "lat": 37.6306,
+      "lon": -112.8453,
+      "popular": true,
+      "noteJa": "ルート B の途中、UT-14 から UT-148 を北へ 3mi。標高 10,000ft の円形侵食地形で、ブライスの予行演習としてブログ定番。UT-148 は積雪期（おおむね 11〜5月）閉鎖。補給施設なし。",
+      "amenities": {
+        "fuel": {
+          "status": "no"
+        },
+        "grocery": {
+          "status": "no"
+        },
+        "pharmacy": {
+          "status": "no"
+        }
+      }
+    },
+    "brian-head": {
+      "name": "Brian Head",
+      "nameJa": "ブライアンヘッド",
+      "kind": "village",
+      "population": 100,
+      "lat": 37.6922,
+      "lon": -112.8497,
+      "popular": true,
+      "noteJa": "シーダーブレイクスのさらに 3mi 北。ユタ最高所のスキータウンで、夏は避暑地として紹介される。小売はあるが観光地価格・営業期間が読めないので、補給の当てにはしないこと。",
+      "amenities": {
+        "fuel": {
+          "status": "limited",
+          "names": [
+            "Brian Head Town Office（56 UT-143）"
+          ],
+          "noteJa": "プレミアム（91 無鉛）1基のみ。通常の給油はシーダーシティで。"
+        },
+        "grocery": {
+          "status": "limited",
+          "names": [
+            "Brian Head General Store（259 S Village Way）"
+          ],
+          "noteJa": "食料・スナック・飲料・ビール。スーパーではなく山の売店。"
+        },
+        "pharmacy": {
+          "status": "no"
         }
       }
     }

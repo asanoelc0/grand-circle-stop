@@ -70,7 +70,8 @@ means writing data — never a new page.
       "kind": "town",              // town | city | village | junction | poi
       "population": 600,
       "lat": 0, "lon": 0,
-      "recommended": true,         // a place worth planning the day's resupply around
+      "recommended": true,         // worth planning the day's resupply around
+      "popular": true,             // a name travellers already know from blogs
       "noteJa": "…",               // what a driver actually needs to know here
       "amenities": {
         "fuel":     { "status": "yes",     "names": ["…"], "hours": "…", "noteJa": "…" },
@@ -98,6 +99,15 @@ means writing data — never a new page.
   relative to a given route.
 - A stop that is only worth visiting for certain onward plans gets
   `"optional": true` on the leg.
+- `recommended` and `popular` answer different questions and must not be
+  merged. `recommended` is a claim about supplies — the reader can finish
+  their shopping here. `popular` only says the place is well known, which is
+  why a famous overlook with no services still carries it. A stop earns
+  `recommended` from its own amenities, never from its fame; grant it when at
+  least two of the three amenities are `yes`, or when it is the only stop
+  offering something over a long stretch. Blog-famous stops with no services
+  are still worth listing: a reader who sees the name with no fuel chip stops
+  planning to buy anything there.
 
 ## Writing the notes
 

@@ -62,9 +62,13 @@ for (const file of targets) {
       if (leg.detour && typeof leg.detourMi !== "number") warnings.push(`route "${r.id}": leg "${leg.stop}" marked detour without detourMi`);
     }
     if (r.distance != null) {
-      const last = r.legs[r.legs.length - 1];
-      if (Math.abs(last.mile - r.distance) > Math.max(12, r.distance * 0.15)) {
-        warnings.push(`route "${r.id}": distance ${r.distance} disagrees with last milepost ${last.mile}`);
+      // `distance` is origin -> destination; optional legs may run past the
+      // destination (a side trip further along the highway), so measure to the
+      // last required stop instead.
+      const required = r.legs.filter((l) => !l.optional);
+      const last = required[required.length - 1];
+      if (last && Math.abs(last.mile - r.distance) > Math.max(12, r.distance * 0.15)) {
+        warnings.push(`route "${r.id}": distance ${r.distance} disagrees with last required milepost ${last.mile} at "${last.stop}"`);
       }
     }
   }
