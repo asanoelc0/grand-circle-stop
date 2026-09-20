@@ -156,6 +156,26 @@
   .warnings li { margin: 3px 0; font-size: 13.5px; }
   .warnings li::marker { color: var(--warn); }
 
+  .disclosures { display: flex; flex-direction: column; gap: 8px; }
+  .fees { background: var(--info-soft); border-left: 3px solid var(--info); border-radius: 0 3px 3px 0; }
+  .fees > summary {
+    list-style: none; cursor: pointer; padding: 8px 14px;
+    font-family: var(--f-display); font-weight: 600; font-size: 12.5px;
+    letter-spacing: .04em; color: var(--info);
+  }
+  .fees > summary::-webkit-details-marker { display: none; }
+  .fees > summary::after { content: " ▾"; }
+  .fees[open] > summary::after { content: " ▴"; }
+  .fees > summary:focus-visible { outline: 2px solid var(--info); outline-offset: -2px; }
+  .fees dl { margin: 0; padding: 0 14px 12px; }
+  .fees dt {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+    font-family: var(--f-display); font-weight: 800; font-size: 13.5px; margin-top: 10px;
+  }
+  .fees dt:first-child { margin-top: 0; }
+  .fees .amt { font-variant-numeric: tabular-nums; color: var(--info); }
+  .fees dd { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-2); max-width: 62ch; }
+
   /* ---- controls ---- */
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 22px 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
   .controls label { display: flex; align-items: center; gap: 7px; font-size: 13.5px; cursor: pointer; color: var(--ink-2); }
@@ -376,6 +396,13 @@
   function renderSummary() {
     var r = route();
     var warn = (r.warningsJa || []).map(function (w) { return "<li>" + esc(w) + "</li>"; }).join("");
+    var fees = (data.feesJa || []).filter(function (f) {
+      return !f.routes || f.routes.indexOf(r.id) >= 0;
+    });
+    var feeHtml = fees.map(function (f) {
+      return '<dt>' + esc(f.titleJa) + '<span class="amt">' + esc(f.amountJa) + '</span></dt>' +
+        (f.noteJa ? '<dd>' + esc(f.noteJa) + '</dd>' : "");
+    }).join("");
     document.getElementById("summary").innerHTML =
       '<ul class="stats">' +
         '<li><span class="stat-k">距離</span><div>' + r.distance + ' <span style="font-size:13px">mi</span> / ' + Math.round(r.distance * 1.609) + ' <span style="font-size:13px">km</span></div></li>' +
@@ -383,7 +410,10 @@
         '<li class="stat-route"><span class="stat-k">経路</span><div style="font-size:15px;font-weight:600">' + esc(r.name) + '</div></li>' +
       '</ul>' +
       '<p>' + esc(r.summaryJa) + '</p>' +
-      (warn ? '<details class="warnings"><summary>注意・制限 ' + r.warningsJa.length + ' 件</summary><ul>' + warn + '</ul></details>' : "");
+      '<div class="disclosures">' +
+      (warn ? '<details class="warnings"><summary>注意・制限 ' + r.warningsJa.length + ' 件</summary><ul>' + warn + '</ul></details>' : "") +
+      (feeHtml ? '<details class="fees"><summary>料金・有料道路 ' + fees.length + ' 件</summary><dl>' + feeHtml + '</dl></details>' : "") +
+      '</div>';
   }
 
   function amenityBlock(a) {

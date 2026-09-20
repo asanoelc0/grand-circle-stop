@@ -19,19 +19,25 @@ means writing data — never a new page.
    restriction, or a modest detour that buys services the main route lacks.
    Mark resupply detours as separate routes rather than hiding them in notes —
    that is what the switcher is for. Exactly one route gets `"default": true`.
-3. **Research each stop.** Do not answer from memory: settlements lose their
+3. **Check the rules before the shops.** Size limits, seasonal closures,
+   permits and fees change between seasons and get rewritten outright — the
+   Zion tunnel's escort permit became a flat ban in June 2026, which silently
+   invalidated every "pay $15 and you're through" note written before it.
+   Verify each restriction against a current source and date it, and treat
+   anything you remember about a rule as a lead to check, not a fact.
+4. **Research each stop.** Do not answer from memory: settlements lose their
    only gas station, and a store's hours are the whole point of the page. Use
    `WebSearch` per town for "gas station / grocery / pharmacy", and prefer the
    business's own site or the town's tourism page over an aggregator. Record
    what you found in `sources`.
-4. **Write `data/<id>.json`** to the schema below.
-5. **Validate**: `node scripts/validate.mjs data/<id>.json` — it must pass with
+5. **Write `data/<id>.json`** to the schema below.
+6. **Validate**: `node scripts/validate.mjs data/<id>.json` — it must pass with
    zero errors; read the warnings before dismissing them.
-6. **Preview**: `python3 scripts/serve.py` then open
+7. **Preview**: `python3 scripts/serve.py` then open
    `http://localhost:8000/?data=data/<id>.json`. (Use this, not
    `python3 -m http.server`, which drops the UTF-8 charset and mangles the
    Japanese copy.)
-7. **Link it** from `README.md`.
+8. **Link it** from `README.md`.
 
 ## Schema
 
@@ -47,6 +53,16 @@ means writing data — never a new page.
   "units": "mi",
   "dataAsOf": "2026-09",           // required in practice: readers judge staleness by it
   "sources": ["https://…"],
+
+  // Corridor-wide costs. "Is there a toll?" is rarely just about tolls — park
+  // entrances, permits and passes are what the money question really means.
+  // Answer it even when the answer is "no tolls", and say what it costs
+  // instead. `routes` limits an entry to the routes it applies to.
+  "feesJa": [
+    { "titleJa": "通行料（有料道路）", "amountJa": "なし", "noteJa": "…" },
+    { "titleJa": "ザイオン国立公園 入園料", "amountJa": "$35 / 台（7日間）",
+      "routes": ["A", "C", "D"], "noteJa": "…" }
+  ],
 
   "routes": [{
     "id": "A",                     // 1–2 chars; shown in the tab shield
