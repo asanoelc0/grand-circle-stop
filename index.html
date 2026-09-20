@@ -1,0 +1,378 @@
+<title>Zion→Bryce 補給マップ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  :root {
+    --ground: #fbfbfa;
+    --panel: #ffffff;
+    --panel-2: #f2f3f1;
+    --ink: #1b211e;
+    --ink-2: #5c6560;
+    --ink-3: #8d9691;
+    --rule: #dfe2de;
+    --rule-strong: #c3c8c3;
+    --accent: #17663f;
+    --accent-ink: #ffffff;
+    --accent-soft: #e4efe8;
+    --warn: #a14a16;
+    --warn-soft: #f7ece2;
+    --off: #eceeeb;
+    --shield: #24302a;
+    --shadow: 0 1px 2px rgba(27,33,30,.07), 0 6px 18px rgba(27,33,30,.05);
+    --f-display: "Overpass", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Sans 3", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #141816;
+      --panel: #1c211f;
+      --panel-2: #232927;
+      --ink: #e8ebe9;
+      --ink-2: #a3ada8;
+      --ink-3: #737d78;
+      --rule: #2e3634;
+      --rule-strong: #414a47;
+      --accent: #57b485;
+      --accent-ink: #0d1411;
+      --accent-soft: #1d3329;
+      --warn: #e09257;
+      --warn-soft: #33261a;
+      --off: #262c2a;
+      --shield: #e8ebe9;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #141816;
+    --panel: #1c211f;
+    --panel-2: #232927;
+    --ink: #e8ebe9;
+    --ink-2: #a3ada8;
+    --ink-3: #737d78;
+    --rule: #2e3634;
+    --rule-strong: #414a47;
+    --accent: #57b485;
+    --accent-ink: #0d1411;
+    --accent-soft: #1d3329;
+    --warn: #e09257;
+    --warn-soft: #33261a;
+    --off: #262c2a;
+    --shield: #e8ebe9;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 16px; padding-block: 0 56px; }
+
+  header.masthead { padding-block: 28px 18px; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--f-display); font-weight: 600; font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 800; font-size: clamp(26px, 6vw, 38px);
+    line-height: 1.12; margin: 6px 0 8px; text-wrap: balance; letter-spacing: -.01em;
+  }
+  .sub { color: var(--ink-2); margin: 0; max-width: 60ch; }
+
+  /* ---- route switch ---- */
+  .switch-bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    margin-inline: -16px; padding: 10px 16px;
+  }
+  .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    display: flex; align-items: center; gap: 9px; flex: 0 0 auto;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--rule-strong);
+    border-radius: 3px; padding: 7px 12px 7px 8px; cursor: pointer;
+    font-family: var(--f-body); font-size: 13px; line-height: 1.25; text-align: left;
+  }
+  .tab:hover { border-color: var(--ink-3); }
+  .tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .shield {
+    font-family: var(--f-display); font-weight: 800; font-size: 13px;
+    width: 24px; height: 24px; display: grid; place-items: center;
+    border: 2px solid currentColor; border-radius: 2px; flex: 0 0 auto;
+  }
+  .tab-name { font-weight: 600; white-space: nowrap; }
+  .tab-meta { font-size: 11px; opacity: .72; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* ---- summary ---- */
+  .summary { margin-top: 20px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 12px; padding: 0; list-style: none; }
+  .stats div { font-family: var(--f-display); font-weight: 800; font-size: 21px; font-variant-numeric: tabular-nums; }
+  .stats dt, .stat-k {
+    font-family: var(--f-display); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); font-weight: 600;
+  }
+  .summary p { margin: 0 0 12px; color: var(--ink-2); max-width: 62ch; }
+  .warnings { margin: 0; padding: 12px 14px; background: var(--warn-soft); border-left: 3px solid var(--warn); border-radius: 0 3px 3px 0; }
+  .warnings ul { margin: 0; padding-left: 18px; }
+  .warnings li { margin: 3px 0; font-size: 13.5px; }
+  .warnings li::marker { color: var(--warn); }
+
+  /* ---- controls ---- */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 22px 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+  .controls label { display: flex; align-items: center; gap: 7px; font-size: 13.5px; cursor: pointer; color: var(--ink-2); }
+  .controls input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .legend { display: flex; gap: 12px; margin-left: auto; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; }
+
+  /* ---- stop list ---- */
+  .stops { list-style: none; margin: 0; padding: 0; }
+  .stop { display: grid; grid-template-columns: 58px 1fr; gap: 0 14px; position: relative; }
+  .rail { position: relative; padding-top: 20px; }
+  .rail::before {
+    content: ""; position: absolute; left: 48px; top: 0; bottom: 0; width: 2px; background: var(--rule-strong);
+  }
+  .stop:first-child .rail::before { top: 26px; }
+  .stop:last-child .rail::before { bottom: calc(100% - 26px); }
+  .mile { font-family: var(--f-display); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink-3); text-align: right; padding-right: 16px; }
+  .dot { position: absolute; left: 43px; top: 25px; width: 12px; height: 12px; border-radius: 50%; background: var(--rule-strong); border: 2px solid var(--ground); }
+  .stop[data-tier="full"] .dot { background: var(--accent); width: 14px; height: 14px; left: 42px; }
+  .stop[data-kind="junction"] .dot, .stop[data-kind="poi"] .dot { border-radius: 2px; }
+
+  .card { padding: 16px 0 18px; border-bottom: 1px solid var(--rule); }
+  .stop:last-child .card { border-bottom: none; }
+  .stop-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .stop-name { font-family: var(--f-display); font-weight: 800; font-size: 17px; letter-spacing: -.005em; }
+  .stop-en { font-size: 12px; color: var(--ink-3); }
+  .flag {
+    font-family: var(--f-display); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 2px; background: var(--off); color: var(--ink-2);
+  }
+  .flag.detour { background: var(--warn-soft); color: var(--warn); }
+  .flag.rec { background: var(--accent-soft); color: var(--accent); }
+  .stop-note { margin: 7px 0 0; color: var(--ink-2); font-size: 13.5px; max-width: 62ch; }
+
+  .amen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .a {
+    border: 1px solid var(--rule); border-radius: 3px; padding: 8px 10px; background: var(--panel);
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .a-k { font-family: var(--f-display); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .a-v { font-family: var(--f-display); font-weight: 800; font-size: 13px; }
+  .a-d { font-size: 12px; color: var(--ink-2); line-height: 1.45; overflow-wrap: anywhere; }
+  .a[data-s="yes"] { border-left: 3px solid var(--accent); }
+  .a[data-s="yes"] .a-v { color: var(--accent); }
+  .a[data-s="limited"] { border-left: 3px solid var(--warn); }
+  .a[data-s="limited"] .a-v { color: var(--warn); }
+  .a[data-s="no"] { background: var(--off); border-left: 3px solid var(--rule-strong); }
+  .a[data-s="no"] .a-v, .a[data-s="no"] .a-k { color: var(--ink-3); }
+
+  footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
+  footer a { color: var(--ink-2); }
+  .err { padding: 16px; border-left: 3px solid var(--warn); background: var(--warn-soft); margin-top: 24px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: var(--panel-2); padding: 1px 5px; border-radius: 2px; }
+
+  @media (max-width: 560px) {
+    .stop { grid-template-columns: 42px 1fr; gap: 0 10px; }
+    .rail::before { left: 34px; }
+    .dot { left: 29px; }
+    .stop[data-tier="full"] .dot { left: 28px; }
+    .mile { padding-right: 12px; font-size: 12px; }
+    .amen { grid-template-columns: 1fr; }
+    .legend { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow" id="region">Grand Circle · Southern Utah</div>
+    <h1 id="title">ザイオン → ブライスキャニオン</h1>
+    <p class="sub" id="sub">ルートを切り替えて、途中の町の <strong>ガソリン・スーパー・ドラッグストア</strong> を確認する。</p>
+  </header>
+
+  <div class="switch-bar">
+    <div class="tabs" role="tablist" aria-label="ルート選択" id="tabs"></div>
+  </div>
+
+  <section class="summary" id="summary" aria-live="polite"></section>
+
+  <div class="controls">
+    <label><input type="checkbox" id="f-full"> 3つ揃う町だけ</label>
+    <label><input type="checkbox" id="f-services"> 補給できる所だけ</label>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--accent)"></i>あり</span>
+      <span><i class="swatch" style="background:var(--warn)"></i>限定的</span>
+      <span><i class="swatch" style="background:var(--rule-strong)"></i>なし</span>
+    </div>
+  </div>
+
+  <ul class="stops" id="stops"></ul>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+(function () {
+  var LABELS = { fuel: "ガソリン", grocery: "スーパー", pharmacy: "ドラッグストア" };
+  var STATUS = { yes: "あり", limited: "限定的", no: "なし", unknown: "不明" };
+  var KEYS = ["fuel", "grocery", "pharmacy"];
+  var data = null, current = null;
+
+  var params = new URLSearchParams(location.search);
+  var src = params.get("data") || "data/zion-bryce.json";
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function tier(stop) {
+    var n = 0, lim = 0;
+    KEYS.forEach(function (k) {
+      var s = (stop.amenities && stop.amenities[k] && stop.amenities[k].status) || "unknown";
+      if (s === "yes") n++; else if (s === "limited") lim++;
+    });
+    if (n === 3) return "full";
+    if (n + lim === 0) return "none";
+    return "partial";
+  }
+
+  function renderTabs() {
+    var el = document.getElementById("tabs");
+    el.innerHTML = data.routes.map(function (r) {
+      return '<button class="tab" role="tab" id="tab-' + esc(r.id) + '" data-id="' + esc(r.id) + '" ' +
+        'aria-selected="' + (r.id === current ? "true" : "false") + '" tabindex="' + (r.id === current ? "0" : "-1") + '">' +
+        '<span class="shield">' + esc(r.id) + '</span>' +
+        '<span><span class="tab-name">' + esc(r.nameJa || r.name) + '</span><br>' +
+        '<span class="tab-meta">' + r.distance + ' mi · ' + Math.floor(r.durationMin / 60) + 'h' + String(r.durationMin % 60).padStart(2, "0") + '</span></span>' +
+        '</button>';
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".tab"), function (b) {
+      b.addEventListener("click", function () { select(b.dataset.id); });
+      b.addEventListener("keydown", function (e) {
+        var i = data.routes.findIndex(function (r) { return r.id === b.dataset.id; });
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          var next = data.routes[(i + (e.key === "ArrowRight" ? 1 : data.routes.length - 1)) % data.routes.length];
+          select(next.id);
+          document.getElementById("tab-" + next.id).focus();
+        }
+      });
+    });
+  }
+
+  function route() { return data.routes.filter(function (r) { return r.id === current; })[0]; }
+
+  function renderSummary() {
+    var r = route();
+    var warn = (r.warningsJa || []).map(function (w) { return "<li>" + esc(w) + "</li>"; }).join("");
+    document.getElementById("summary").innerHTML =
+      '<ul class="stats">' +
+        '<li><span class="stat-k">距離</span><div>' + r.distance + ' <span style="font-size:13px">mi</span> / ' + Math.round(r.distance * 1.609) + ' <span style="font-size:13px">km</span></div></li>' +
+        '<li><span class="stat-k">所要</span><div>' + Math.floor(r.durationMin / 60) + 'h ' + String(r.durationMin % 60).padStart(2, "0") + 'm</div></li>' +
+        '<li><span class="stat-k">経路</span><div style="font-size:15px;font-weight:600">' + esc(r.name) + '</div></li>' +
+      '</ul>' +
+      '<p>' + esc(r.summaryJa) + '</p>' +
+      (warn ? '<div class="warnings"><ul>' + warn + '</ul></div>' : "");
+  }
+
+  function amenityBlock(a) {
+    var s = (a && a.status) || "unknown";
+    var detail = [];
+    if (a && a.names && a.names.length) detail.push(a.names.join(" / "));
+    if (a && a.hours) detail.push(a.hours);
+    if (a && a.noteJa) detail.push(a.noteJa);
+    return detail.join(" — ");
+  }
+
+  function renderStops() {
+    var r = route();
+    var onlyFull = document.getElementById("f-full").checked;
+    var onlyServices = document.getElementById("f-services").checked;
+    var rows = r.legs.map(function (leg) {
+      var stop = data.stops[leg.stop];
+      if (!stop) return "";
+      var t = tier(stop);
+      if (onlyFull && t !== "full") return "";
+      if (onlyServices && t === "none") return "";
+      var flags = "";
+      if (leg.detour) flags += '<span class="flag detour">寄り道 +' + leg.detourMi + 'mi</span>';
+      if (leg.optional) flags += '<span class="flag">任意</span>';
+      if (stop.recommended) flags += '<span class="flag rec">補給推奨</span>';
+      var amen = KEYS.map(function (k) {
+        var a = (stop.amenities || {})[k] || { status: "unknown" };
+        var d = amenityBlock(a);
+        return '<div class="a" data-s="' + esc(a.status || "unknown") + '">' +
+          '<span class="a-k">' + LABELS[k] + '</span>' +
+          '<span class="a-v">' + (STATUS[a.status] || STATUS.unknown) + '</span>' +
+          (d ? '<span class="a-d">' + esc(d) + '</span>' : "") +
+          '</div>';
+      }).join("");
+      return '<li class="stop" data-tier="' + t + '" data-kind="' + esc(stop.kind || "town") + '">' +
+        '<div class="rail"><div class="mile">' + leg.mile + '</div><span class="dot"></span></div>' +
+        '<div class="card">' +
+          '<div class="stop-head"><span class="stop-name">' + esc(stop.nameJa || stop.name) + '</span>' +
+          '<span class="stop-en">' + esc(stop.name) + (stop.population ? " · 人口 " + stop.population.toLocaleString() : "") + '</span>' + flags + '</div>' +
+          (stop.noteJa ? '<p class="stop-note">' + esc(stop.noteJa) + '</p>' : "") +
+          '<div class="amen">' + amen + '</div>' +
+        '</div></li>';
+    }).join("");
+    document.getElementById("stops").innerHTML = rows ||
+      '<li style="padding:24px 0;color:var(--ink-3)">条件に合う町がありません。フィルタを外してください。</li>';
+  }
+
+  function select(id) {
+    current = id;
+    try { localStorage.setItem("route:" + data.id, id); } catch (e) {}
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) {
+      var on = b.dataset.id === id;
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+    });
+    renderSummary();
+    renderStops();
+  }
+
+  function renderFooter() {
+    var links = (data.sources || []).map(function (u) {
+      return '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u.replace(/^https?:\/\//, "").split("/")[0]) + '</a>';
+    }).join(" · ");
+    document.getElementById("footer").innerHTML =
+      'データ基準: ' + esc(data.dataAsOf || "-") + '。営業時間・店舗の有無は変わります。処方薬・特殊な食料・大量の燃料が必要な場合は、出発前に電話で確認を。' +
+      '<br>冬季は UT-14 / UT-12 の路面状況を <a href="https://udottraffic.utah.gov/" target="_blank" rel="noopener">udottraffic.utah.gov</a> で必ず確認。' +
+      (links ? '<br>出典: ' + links : "");
+  }
+
+  function boot(d) {
+    data = d;
+    document.title = (d.titleJa || d.title) + " 補給マップ";
+    document.getElementById("region").textContent = d.region || "";
+    document.getElementById("title").textContent = d.titleJa || d.title;
+    var saved = null;
+    try { saved = localStorage.getItem("route:" + d.id); } catch (e) {}
+    var def = d.routes.filter(function (r) { return r.default; })[0] || d.routes[0];
+    current = (saved && d.routes.some(function (r) { return r.id === saved; })) ? saved : def.id;
+    renderTabs();
+    renderFooter();
+    document.getElementById("f-full").addEventListener("change", renderStops);
+    document.getElementById("f-services").addEventListener("change", renderStops);
+    select(current);
+  }
+
+  fetch(src)
+    .then(function (r) { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); })
+    .then(boot)
+    .catch(function (e) {
+      document.getElementById("stops").innerHTML =
+        '<li class="err"><strong>データを読み込めませんでした</strong>（' + esc(e.message) + '）。' +
+        'ローカルで開く場合は <code>python3 -m http.server</code> を実行して <code>http://localhost:8000/</code> を開いてください。' +
+        '別のコースを見るには <code>?data=data/&lt;id&gt;.json</code> を付けます。</li>';
+    });
+})();
+</script>
