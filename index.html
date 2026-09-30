@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>旅費精算帳</title>
+<meta name="theme-color" content="#0f5c5a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="旅費精算帳">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one-screen app — trip header on top, scrolling ledger in the middle, fixed tab bar below; forms open as a bottom sheet. */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #16211f;
+  --muted: #5d6b68;
+  --line: #dde3e1;
+  --accent: #0f5c5a;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcecea;
+  --on-cat: #ffffff;
+  --head-bg: #0f5c5a;
+  --head-ink: #ffffff;
+  --good: #1d7a45;
+  --bad: #b3372b;
+  --warn-bg: #fff4d6;
+  --warn-ink: #6b4b00;
+  --c-hotel: #5b4bb7;
+  --c-tour: #3d7d2b;
+  --c-move: #1f6fae;
+  --c-local: #b86b0b;
+  --shadow: 0 1px 2px rgba(16, 40, 36, .06), 0 4px 16px rgba(16, 40, 36, .06);
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1413; --surface: #172120; --ink: #e6eeec; --muted: #9aaba7; --line: #2a3735;
+    --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec;
+    --good: #5fcf8c; --bad: #ff8a7a; --warn-bg: #3a2f10; --warn-ink: #f4d58a;
+    --c-hotel: #a79bff; --c-tour: #8fd47a; --c-move: #7ab8ee; --c-local: #f0ad55;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1413; --surface: #172120; --ink: #e6eeec; --muted: #9aaba7; --line: #2a3735;
+  --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec;
+  --good: #5fcf8c; --bad: #ff8a7a; --warn-bg: #3a2f10; --warn-ink: #f4d58a;
+  --c-hotel: #a79bff; --c-tour: #8fd47a; --c-move: #7ab8ee; --c-local: #f0ad55;
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+
+.app { display: flex; flex-direction: column; height: 100%; max-width: 640px; margin: 0 auto; }
+
+/* header */
+.top {
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 12px;
+  background: var(--head-bg); color: var(--head-ink);
+}
+.top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.trip-name { font-size: 18px; font-weight: 700; margin: 0; text-wrap: balance; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-date { font-size: 12px; opacity: .8; white-space: nowrap; }
+.trip-total { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.trip-total .label { font-size: 11px; letter-spacing: .08em; opacity: .8; }
+.trip-total .num { font-size: 24px; font-weight: 600; }
+
+main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scrolling: touch; }
+
+.banner {
+  display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; margin-bottom: 14px;
+}
+.banner button { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 4px 10px; color: inherit; cursor: pointer; }
+
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 4px 2px 10px; }
+.section-head h2 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 0; font-weight: 500; }
+.section-head .num { font-size: 15px; font-weight: 600; }
+
+/* expense list */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline;
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.item:active { transform: scale(.99); }
+.item .name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.item .amt { font-weight: 600; text-align: right; }
+.item .meta { font-size: 12px; color: var(--muted); min-width: 0; }
+.item .base { font-size: 12px; color: var(--muted); text-align: right; }
+.cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--cat); }
+
+.empty { text-align: center; color: var(--muted); padding: 40px 12px; font-size: 14px; }
+.empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+
+.fab {
+  position: fixed; right: max(16px, calc(50% - 304px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  background: var(--cat, var(--accent)); color: var(--on-cat); border: 0; border-radius: 999px;
+  padding: 14px 20px; font-weight: 700; font-size: 15px; box-shadow: var(--shadow); cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.fab svg { width: 18px; height: 18px; }
+
+/* tab bar */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tabs-inner { display: grid; grid-template-columns: repeat(6, 1fr); max-width: 640px; margin: 0 auto; }
+.tab {
+  background: none; border: 0; padding: 8px 0 9px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--muted); font-size: 11px; cursor: pointer; position: relative;
+}
+.tab svg { width: 22px; height: 22px; }
+.tab[aria-selected="true"] { color: var(--cat, var(--accent)); font-weight: 700; }
+.tab[aria-selected="true"]::before { content: ""; position: absolute; top: 0; left: 25%; right: 25%; height: 3px; border-radius: 0 0 3px 3px; background: currentColor; }
+.tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* cards (settle / settings) */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.card h3 { margin: 0 0 10px; font-size: 15px; }
+.card p.note { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+
+.bal-row { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.bal-row:first-of-type { border-top: 0; }
+.bal-row .who { font-weight: 700; }
+.bal-row .sub { font-size: 12px; color: var(--muted); grid-column: 1 / -1; }
+.plus { color: var(--good); }
+.minus { color: var(--bad); }
+
+.xfer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.xfer:first-of-type { border-top: 0; }
+.xfer .from { font-weight: 700; }
+.xfer .to { font-weight: 700; text-align: right; }
+.xfer .mid { text-align: center; font-size: 12px; color: var(--muted); }
+.xfer .mid .num { display: block; font-size: 16px; font-weight: 600; color: var(--ink); }
+
+.catbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); margin: 4px 0 10px; }
+.catbar span { background: var(--cat); }
+.catlegend { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+
+/* forms */
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; min-width: 0; }
+.field > label, .lbl { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.input, select.input {
+  width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 11px 12px; font-size: 16px; /* 16px prevents iOS zoom */
+}
+.input.num { font-size: 18px; }
+.row { display: flex; gap: 8px; }
+.row > * { min-width: 0; }
+.grow { flex: 1; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 500;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 14px;
+}
+.chip[aria-pressed="true"] { background: var(--cat, var(--accent)); border-color: var(--cat, var(--accent)); color: var(--on-cat); font-weight: 700; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+
+.share-list { display: flex; flex-direction: column; gap: 6px; }
+.share { display: grid; grid-template-columns: auto 1fr minmax(0, 9.5em); gap: 8px; align-items: center; }
+.share input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--cat, var(--accent)); }
+.share .input { padding: 8px 10px; text-align: right; }
+.share-sum { display: flex; justify-content: space-between; font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.share-sum.bad { color: var(--bad); font-weight: 700; }
+
+.split-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+
+.hint { font-size: 12px; color: var(--muted); }
+.err { font-size: 13px; color: var(--bad); }
+
+/* sheet */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 10; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; max-width: 640px; margin: 0 auto;
+  background: var(--surface); border-radius: 18px 18px 0 0; max-height: 92%; display: flex; flex-direction: column;
+  box-shadow: 0 -6px 30px rgba(0,0,0,.18);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet-head h2 { margin: 0; font-size: 16px; }
+.sheet-body { overflow-y: auto; padding: 14px 16px; }
+.sheet-foot { display: flex; gap: 8px; padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
+.sheet-foot .btn.primary { flex: 1; padding: 13px; font-size: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .sheet:not([hidden]) { animation: up .2s ease-out; }
+  @keyframes up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+
+.member-row, .rate-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.member-row:first-child, .rate-row:first-child { border-top: 0; }
+.member-row .grow, .rate-row .grow { min-width: 0; }
+.rate-row .code { font-family: var(--font-num); font-weight: 600; width: 3.4em; }
+.rate-row .input { padding: 8px 10px; text-align: right; }
+.rate-row .eq { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.iconbtn { background: none; border: 0; color: var(--muted); padding: 6px; cursor: pointer; border-radius: 8px; }
+.iconbtn svg { width: 18px; height: 18px; display: block; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 140px); z-index: 20;
+  background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13px; box-shadow: var(--shadow);
+  max-width: calc(100% - 32px); text-align: center;
+}
+textarea.input { font-family: var(--font-num); font-size: 12px; min-height: 120px; resize: vertical; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="top-row">
+      <h1 class="trip-name" id="hdrName"></h1>
+      <span class="trip-date" id="hdrDate"></span>
+    </div>
+    <div class="trip-total"><span class="label">合計</span><span class="num" id="hdrTotal"></span></div>
+  </header>
+
+  <main id="main"></main>
+
+  <nav class="tabs" aria-label="画面切り替え">
+    <div class="tabs-inner" role="tablist" id="tabs"></div>
+  </nav>
+</div>
+
+<button class="fab" id="fab" type="button" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  <span id="fabLabel">追加</span>
+</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-head">
+    <h2 id="sheetTitle"></h2>
+    <button class="iconbtn" type="button" id="sheetClose" aria-label="閉じる">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-foot" id="sheetFoot"></div>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+const STORAGE_KEY = 'travel-ledger-v1';
+
+const CATS = [
+  { id: 'hotel', label: 'ホテル', color: '--c-hotel',
+    icon: '<path d="M3 20V6M3 14h18v6M21 14v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="11" r="2"/>' },
+  { id: 'tour', label: 'ツアー', color: '--c-tour',
+    icon: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>' },
+  { id: 'move', label: '移動', color: '--c-move',
+    icon: '<path d="M2 16l20-8-8 12-2-5-5-1z"/>' },
+  { id: 'local', label: '現地', color: '--c-local',
+    icon: '<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>' },
+];
+const VIEWS = [
+  ...CATS,
+  { id: 'settle', label: '精算', icon: '<path d="M4 7h13l-3-3M20 17H7l3 3"/>' },
+  { id: 'settings', label: '設定', icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>' },
+];
+
+const COMMON_CURRENCIES = ['JPY','USD','EUR','GBP','AUD','CAD','CHF','CNY','HKD','TWD','KRW','SGD','THB','MYR','IDR','PHP','VND','INR','NZD','MXN','BRL','TRY','AED','SEK','NOK','DKK','CZK','HUF','PLN','ZAR'];
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+
+/* ---------- state ---------- */
+
+function sampleState() {
+  const a = uid(), b = uid(), c = uid();
+  return {
+    sample: true,
+    trip: { name: 'ハワイ旅行 (サンプル)', startDate: '2026-10-10', base: 'JPY' },
+    members: [{ id: a, name: 'たろう' }, { id: b, name: 'はなこ' }, { id: c, name: 'けんじ' }],
+    currencies: ['JPY', 'USD'],
+    rates: { USD: 148.5 },
+    rateNote: 'サンプルのレートです',
+    expenses: [
+      { id: uid(), cat: 'hotel', name: 'ワイキキのホテル 4泊', amount: 1680, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 1 },
+      { id: uid(), cat: 'move', name: '羽田⇄ホノルル 航空券', amount: 396000, currency: 'JPY', payer: b, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 2 },
+      { id: uid(), cat: 'tour', name: 'シュノーケルツアー', amount: 390, currency: 'USD', payer: c, mode: 'custom', participants: [a, c], shares: { [a]: 195, [c]: 195 }, createdAt: 3 },
+      { id: uid(), cat: 'local', name: '夕食 (ステーキ)', amount: 214.6, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 4 },
+    ],
+  };
+}
+
+function emptyState() {
+  return {
+    sample: false,
+    trip: { name: '新しい旅行', startDate: new Date().toISOString().slice(0, 10), base: 'JPY' },
+    members: [{ id: uid(), name: '自分' }],
+    currencies: ['JPY'],
+    rates: {},
+    rateNote: '',
+    expenses: [],
+  };
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && s.trip && Array.isArray(s.expenses)) return normalize(s);
+    }
+  } catch (e) { /* storage unavailable: fall through */ }
+  return sampleState();
+}
+
+function normalize(s) {
+  s.members = s.members || [];
+  s.currencies = s.currencies || [s.trip.base];
+  if (!s.currencies.includes(s.trip.base)) s.currencies.unshift(s.trip.base);
+  s.rates = s.rates || {};
+  s.expenses.forEach(e => { e.shares = e.shares || {}; e.participants = e.participants || []; });
+  return s;
+}
+
+let storageOk = true;
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); storageOk = true; }
+  catch (e) { if (storageOk) toast('この端末に保存できませんでした (プライベートモード?)'); storageOk = false; }
+}
+
+let state = load();
+let view = (() => { try { return localStorage.getItem(STORAGE_KEY + ':view') || 'hotel'; } catch (e) { return 'hotel'; } })();
+if (!VIEWS.some(v => v.id === view)) view = 'hotel';
+
+/* ---------- money ---------- */
+
+const digitCache = {};
+function digits(cur) {
+  if (cur in digitCache) return digitCache[cur];
+  let d = 2;
+  try { d = new Intl.NumberFormat('ja-JP', { style: 'currency', currency: cur }).resolvedOptions().maximumFractionDigits; } catch (e) {}
+  return (digitCache[cur] = d);
+}
+function roundTo(v, cur) { const f = 10 ** digits(cur); return Math.sign(v) * Math.round(Math.abs(v) * f + 1e-9) / f; }
+function fmt(v, cur) {
+  try {
+    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol' }).format(v);
+  } catch (e) { return cur + ' ' + v.toFixed(digits(cur)); }
+}
+function rateOf(cur) { return cur === state.trip.base ? 1 : Number(state.rates[cur]) || 0; }
+function toBase(v, cur) { return v * rateOf(cur); }
+
+/* Per-person shares in the expense's own currency. Equal split hands leftover minor units to the first people. */
+function sharesOf(e) {
+  const ids = e.participants.filter(id => state.members.some(m => m.id === id));
+  const out = {};
+  if (e.mode === 'custom') {
+    ids.forEach(id => out[id] = Number(e.shares[id]) || 0);
+    return out;
+  }
+  if (!ids.length) return out;
+  const f = 10 ** digits(e.currency);
+  const total = Math.round(e.amount * f);
+  const each = Math.floor(total / ids.length);
+  let rest = total - each * ids.length;
+  ids.forEach(id => { out[id] = (each + (rest > 0 ? 1 : 0)) / f; if (rest > 0) rest--; });
+  return out;
+}
+
+function memberName(id) { const m = state.members.find(m => m.id === id); return m ? m.name : '(削除済み)'; }
+
+/* ---------- helpers ---------- */
+
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const svg = (paths) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const parseNum = v => { const n = parseFloat(String(v).replace(/[,，\s]/g, '').replace(/[０-９．]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))); return isFinite(n) ? n : NaN; };
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200);
+}
+
+function catVar(cat) { const c = CATS.find(c => c.id === cat); return c ? `var(${c.color})` : 'var(--accent)'; }
+
+/* ---------- render ---------- */
+
+function render() {
+  const base = state.trip.base;
+  $('#hdrName').textContent = state.trip.name || '旅行';
+  $('#hdrDate').textContent = state.trip.startDate ? state.trip.startDate.replace(/-/g, '/') + ' 出発' : '';
+  const total = state.expenses.reduce((s, e) => s + toBase(e.amount, e.currency), 0);
+  $('#hdrTotal').textContent = fmt(roundTo(total, base), base);
+
+  const tabs = $('#tabs');
+  tabs.innerHTML = VIEWS.map(v => `
+    <button class="tab" role="tab" type="button" data-view="${v.id}" aria-selected="${v.id === view}" style="${v.color ? `--cat: var(${v.color})` : ''}">
+      ${svg(v.icon)}<span>${v.label}</span>
+    </button>`).join('');
+
+  const cat = CATS.find(c => c.id === view);
+  const fab = $('#fab');
+  fab.hidden = !cat;
+  if (cat) { fab.style.setProperty('--cat', `var(${cat.color})`); $('#fabLabel').textContent = cat.label + 'を追加'; }
+
+  const main = $('#main');
+  let html = '';
+  if (state.sample) {
+    html += `<div class="banner"><span>サンプルデータを表示しています。</span><button type="button" data-act="start-new">新しい旅行を始める</button></div>`;
+  }
+  if (cat) html += renderCategory(cat);
+  else if (view === 'settle') html += renderSettle();
+  else html += renderSettings();
+  main.innerHTML = html;
+  main.style.setProperty('--cat', cat ? `var(${cat.color})` : 'var(--accent)');
+}
+
+function renderCategory(cat) {
+  const base = state.trip.base;
+  const items = state.expenses.filter(e => e.cat === cat.id).sort((a, b) => b.createdAt - a.createdAt);
+  const sub = items.reduce((s, e) => s + toBase(e.amount, e.currency), 0);
+  let h = `<div class="section-head"><h2>${cat.label} · ${items.length}件</h2><span class="num">${fmt(roundTo(sub, base), base)}</span></div>`;
+  if (!items.length) {
+    return h + `<div class="empty"><strong>${cat.label}の費用はまだありません</strong>右下の「${cat.label}を追加」から入力できます。</div>`;
+  }
+  h += '<div class="list">';
+  for (const e of items) {
+    const shares = sharesOf(e);
+    const n = Object.keys(shares).length;
+    const splitTxt = n === 0 ? '割り勘なし' : e.mode === 'equal' ? `${n}人で均等` : `${n}人で個別`;
+    const noRate = !rateOf(e.currency);
+    h += `<button class="item" type="button" data-edit="${e.id}">
+      <span class="name"><span class="cat-dot"></span>${esc(e.name)}</span>
+      <span class="amt num">${fmt(e.amount, e.currency)}</span>
+      <span class="meta">${esc(memberName(e.payer))}が支払い · ${splitTxt}</span>
+      <span class="base num">${e.currency === base ? '' : noRate ? '<span class="minus">レート未設定</span>' : '≈ ' + fmt(roundTo(toBase(e.amount, e.currency), base), base)}</span>
+    </button>`;
+  }
+  return h + '</div>';
+}
+
+/* An expense's value in the settlement currency, split so the per-person parts add up exactly (largest remainder). */
+function baseSplit(e) {
+  const f = 10 ** digits(state.trip.base);
+  const total = Math.round(toBase(e.amount, e.currency) * f);
+  const shares = sharesOf(e);
+  const ids = Object.keys(shares);
+  const w = ids.reduce((s, id) => s + shares[id], 0);
+  const parts = {};
+  if (!ids.length) return { total: total / f, parts };
+  const raw = ids.map(id => ({ id, v: w > 0 ? total * shares[id] / w : total / ids.length }));
+  raw.forEach(r => r.fl = Math.floor(r.v));
+  let rest = total - raw.reduce((s, r) => s + r.fl, 0);
+  [...raw].sort((a, b) => (b.v - b.fl) - (a.v - a.fl)).forEach(r => { if (rest > 0) { r.fl++; rest--; } });
+  raw.forEach(r => parts[r.id] = r.fl / f);
+  return { total: total / f, parts };
+}
+
+function computeBalances() {
+  const bal = {};
+  state.members.forEach(m => bal[m.id] = { paid: 0, owed: 0 });
+  for (const e of state.expenses) {
+    const { total, parts } = baseSplit(e);
+    if (!Object.keys(parts).length) continue; // no split: not part of the settlement
+    if (bal[e.payer]) bal[e.payer].paid += total;
+    for (const id in parts) if (bal[id]) bal[id].owed += parts[id];
+  }
+  return bal;
+}
+
+function computeTransfers(bal) {
+  const base = state.trip.base;
+  const eps = 0.5 / 10 ** digits(base);
+  const cred = [], debt = [];
+  for (const id in bal) {
+    const d = bal[id].paid - bal[id].owed;
+    if (d > eps) cred.push({ id, v: d });
+    else if (d < -eps) debt.push({ id, v: -d });
+  }
+  cred.sort((a, b) => b.v - a.v); debt.sort((a, b) => b.v - a.v);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const x = Math.min(debt[i].v, cred[j].v);
+    if (roundTo(x, base) > 0) out.push({ from: debt[i].id, to: cred[j].id, v: roundTo(x, base) });
+    debt[i].v -= x; cred[j].v -= x;
+    if (debt[i].v <= eps) i++;
+    if (cred[j].v <= eps) j++;
+  }
+  return out;
+}
+
+function renderSettle() {
+  const base = state.trip.base;
+  const missing = state.currencies.filter(c => c !== base && !rateOf(c) && state.expenses.some(e => e.currency === c));
+  let h = '';
+  if (missing.length) {
+    h += `<div class="banner"><span>${missing.join(', ')} のレートが未設定のため、その費用は 0 として計算しています。</span><button type="button" data-view-go="settings">設定へ</button></div>`;
+  }
+
+  const bal = computeBalances();
+  const transfers = computeTransfers(bal);
+  h += `<div class="card"><h3>精算方法</h3><p class="note">${base} 換算・旅行開始日のレートで計算</p>`;
+  if (!transfers.length) h += `<div class="hint">精算の必要はありません。</div>`;
+  for (const t of transfers) {
+    h += `<div class="xfer"><span class="from">${esc(memberName(t.from))}</span>
+      <span class="mid">支払う<span class="num">${fmt(t.v, base)}</span></span>
+      <span class="to">${esc(memberName(t.to))}</span></div>`;
+  }
+  h += '</div>';
+
+  h += `<div class="card"><h3>メンバー別</h3>`;
+  for (const m of state.members) {
+    const b = bal[m.id]; const d = roundTo(b.paid - b.owed, base);
+    h += `<div class="bal-row"><span class="who">${esc(m.name)}</span>
+      <span class="num ${d > 0 ? 'plus' : d < 0 ? 'minus' : ''}">${d > 0 ? '+' : ''}${fmt(d, base)}</span>
+      <span class="sub">立替 <span class="num">${fmt(roundTo(b.paid, base), base)}</span> ・ 負担 <span class="num">${fmt(roundTo(b.owed, base), base)}</span></span></div>`;
+  }
+  h += `</div>`;
+
+  const totals = CATS.map(c => ({ c, v: state.expenses.filter(e => e.cat === c.id).reduce((s, e) => s + toBase(e.amount, e.currency), 0) }));
+  const all = totals.reduce((s, t) => s + t.v, 0);
+  h += `<div class="card"><h3>カテゴリ別</h3>`;
+  if (all > 0) h += `<div class="catbar">${totals.filter(t => t.v > 0).map(t => `<span style="--cat: var(${t.c.color}); width:${(t.v / all * 100).toFixed(2)}%"></span>`).join('')}</div>`;
+  h += `<div class="catlegend">${totals.map(t => `<span><span class="cat-dot" style="--cat: var(${t.c.color})"></span>${t.c.label}</span><span class="num">${fmt(roundTo(t.v, base), base)}</span>`).join('')}</div></div>`;
+
+  const perHead = {};
+  state.members.forEach(m => perHead[m.id] = Object.fromEntries(CATS.map(c => [c.id, 0])));
+  for (const e of state.expenses) {
+    const { parts } = baseSplit(e);
+    for (const id in parts) if (perHead[id]) perHead[id][e.cat] += parts[id];
+  }
+  h += `<div class="card"><h3>個人の負担内訳</h3>`;
+  for (const m of state.members) {
+    const row = perHead[m.id];
+    h += `<div class="bal-row"><span class="who">${esc(m.name)}</span><span class="num">${fmt(roundTo(Object.values(row).reduce((a, b) => a + b, 0), base), base)}</span>
+      <span class="sub">${CATS.map(c => `${c.label} <span class="num">${fmt(roundTo(row[c.id], base), base)}</span>`).join(' ・ ')}</span></div>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
+function renderSettings() {
+  const t = state.trip;
+  const base = t.base;
+  const rateRows = state.currencies.filter(c => c !== base).map(c => `
+    <div class="rate-row">
+      <span class="code">${c}</span>
+      <span class="eq">1 ${c} =</span>
+      <input class="input num grow" inputmode="decimal" id="rate-${c}" data-rate="${c}" value="${state.rates[c] ?? ''}" placeholder="レート">
+      <span class="eq">${base}</span>
+      <button class="iconbtn" type="button" data-del-cur="${c}" aria-label="${c} を削除">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
+    </div>`).join('');
+  const addable = COMMON_CURRENCIES.filter(c => !state.currencies.includes(c));
+
+  return `
+  <div class="card">
+    <h3>旅行</h3>
+    <div class="field"><label for="setName">旅行名</label><input class="input" id="setName" value="${esc(t.name)}"></div>
+    <div class="row">
+      <div class="field grow"><label for="setDate">旅行開始日</label><input class="input" type="date" id="setDate" value="${esc(t.startDate)}"></div>
+      <div class="field" style="width:7.5em"><label for="setBase">精算通貨</label>
+        <select class="input" id="setBase">${[...new Set([base, ...COMMON_CURRENCIES])].map(c => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>メンバー</h3>
+    <div>${state.members.map(m => `
+      <div class="member-row">
+        <input class="input grow" id="mem-${m.id}" data-mem="${m.id}" value="${esc(m.name)}" aria-label="メンバー名">
+        <button class="iconbtn" type="button" data-del-mem="${m.id}" aria-label="${esc(m.name)} を削除">${svg('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>
+      </div>`).join('')}</div>
+    <form class="row" id="addMemForm" style="margin-top:10px">
+      <input class="input grow" id="newMem" placeholder="名前を入力" autocomplete="off">
+      <button class="btn primary" type="submit">追加</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>通貨とレート</h3>
+    <p class="note">レートは旅行開始日 (${esc(t.startDate || '未設定')}) の値で固定します。${state.rateNote ? '<br>' + esc(state.rateNote) : ''}</p>
+    <div>${rateRows || `<div class="hint">使う外貨を下から追加してください。</div>`}</div>
+    <div class="row" style="margin-top:10px">
+      <select class="input grow" id="addCur" aria-label="追加する通貨">${addable.map(c => `<option>${c}</option>`).join('')}</select>
+      <button class="btn" type="button" data-act="add-cur">通貨を追加</button>
+    </div>
+    <button class="btn primary" type="button" data-act="fetch-rates" style="width:100%;margin-top:10px" ${state.currencies.length < 2 ? 'disabled' : ''}>開始日のレートを取得</button>
+    <p class="note" style="margin:6px 0 0">欧州中央銀行の参照レート (frankfurter.dev) を使います。取得できない通貨は手入力してください。</p>
+  </div>
+
+  <div class="card">
+    <h3>バックアップ</h3>
+    <p class="note">データはこの端末のブラウザに保存されています。機種変更の前などにコピーしておけます。</p>
+    <div class="row">
+      <button class="btn grow" type="button" data-act="export">データをコピー</button>
+      <button class="btn grow" type="button" data-act="import-open">データを貼り付け</button>
+    </div>
+    <div id="importBox" hidden style="margin-top:10px">
+      <textarea class="input" id="importText" placeholder="コピーしたデータを貼り付け"></textarea>
+      <button class="btn primary" type="button" data-act="import" style="width:100%;margin-top:8px">読み込む (今のデータは置き換わります)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>リセット</h3>
+    <p class="note">すべての費用・メンバー・レートを消して新しい旅行を始めます。</p>
+    <button class="btn danger" type="button" data-act="reset-ask" id="resetBtn">すべて消去</button>
+    <div id="resetConfirm" hidden class="row" style="margin-top:8px">
+      <button class="btn danger grow" type="button" data-act="reset">本当に消去する</button>
+      <button class="btn grow" type="button" data-act="reset-cancel">やめる</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- expense sheet ---------- */
+
+let draft = null;
+
+function openExpense(cat, id) {
+  const src = id ? state.expenses.find(e => e.id === id) : null;
+  const lastCur = (() => { const l = [...state.expenses].sort((a, b) => b.createdAt - a.createdAt)[0]; return l ? l.currency : state.currencies.find(c => c !== state.trip.base) || state.trip.base; })();
+  draft = src ? JSON.parse(JSON.stringify(src)) : {
+    id: null, cat, name: '', amount: 0, currency: state.currencies.includes(lastCur) ? lastCur : state.trip.base,
+    payer: state.members[0]?.id || '', mode: 'equal', participants: state.members.map(m => m.id), shares: {},
+  };
+  draft.amountText = src ? String(src.amount) : '';
+  draft.shareText = {};
+  if (draft.mode === 'custom') for (const k in draft.shares) draft.shareText[k] = String(draft.shares[k]);
+  const c = CATS.find(c => c.id === draft.cat);
+  $('#sheet').style.setProperty('--cat', `var(${c.color})`);
+  $('#sheetTitle').textContent = (src ? '編集: ' : '追加: ') + c.label;
+  renderExpenseForm();
+  showSheet();
+  if (!src) setTimeout(() => $('#fName')?.focus(), 60);
+}
+
+function renderExpenseForm() {
+  const d = draft;
+  const body = $('#sheetBody');
+  body.innerHTML = `
+    <div class="field"><label for="fName">名称</label>
+      <input class="input" id="fName" value="${esc(d.name)}" placeholder="例: ホテル代、夕食" autocomplete="off" enterkeyhint="next"></div>
+    <div class="row">
+      <div class="field grow"><label for="fAmount">金額</label>
+        <input class="input num" id="fAmount" inputmode="decimal" value="${esc(d.amountText)}" placeholder="0" autocomplete="off"></div>
+      <div class="field" style="width:6.5em"><label for="fCur">通貨</label>
+        <select class="input" id="fCur">${state.currencies.map(c => `<option ${c === d.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="hint" id="fBaseHint" style="margin:-6px 0 12px"></div>
+    <div class="field"><span class="lbl">分類</span>
+      <div class="chips">${CATS.map(c => `<button type="button" class="chip" data-fcat="${c.id}" aria-pressed="${c.id === d.cat}" style="--cat: var(${c.color})">${c.label}</button>`).join('')}</div></div>
+    <div class="field"><span class="lbl">支払い者</span>
+      <div class="chips">${state.members.map(m => `<button type="button" class="chip" data-payer="${m.id}" aria-pressed="${m.id === d.payer}">${esc(m.name)}</button>`).join('') || '<span class="hint">設定でメンバーを追加してください</span>'}</div></div>
+    <div class="field">
+      <div class="split-head"><span class="lbl">割り勘 (個人の金額)</span>
+        <div class="seg" role="group" aria-label="割り方">
+          <button type="button" data-mode="equal" aria-pressed="${d.mode === 'equal'}">均等</button>
+          <button type="button" data-mode="custom" aria-pressed="${d.mode === 'custom'}">個別に入力</button>
+        </div></div>
+      <div class="share-list" id="shareList"></div>
+      <div class="share-sum" id="shareSum"></div>
+    </div>
+    <div class="err" id="fErr"></div>`;
+  $('#sheetFoot').innerHTML = `
+    ${d.id ? `<button class="btn danger" type="button" data-act="del-exp" id="delBtn">削除</button>` : ''}
+    <button class="btn primary" type="button" data-act="save-exp">${d.id ? '保存' : '追加する'}</button>`;
+  renderShares();
+}
+
+function renderShares() {
+  const d = draft;
+  const list = $('#shareList');
+  const eq = d.mode === 'equal' ? sharesOf({ ...d, mode: 'equal' }) : null;
+  list.innerHTML = state.members.map(m => {
+    const on = d.participants.includes(m.id);
+    const val = d.mode === 'equal' ? (on ? String(eq[m.id] ?? 0) : '') : (on ? (d.shareText[m.id] ?? '') : '');
+    return `<label class="share">
+      <input type="checkbox" data-part="${m.id}" ${on ? 'checked' : ''}>
+      <span>${esc(m.name)}</span>
+      <input class="input num" inputmode="decimal" id="sh-${m.id}" data-share="${m.id}" value="${esc(val)}" ${on ? '' : 'disabled'} placeholder="${on ? '0' : '—'}" ${d.mode === 'equal' ? 'readonly tabindex="-1"' : ''}>
+    </label>`;
+  }).join('');
+  updateSum();
+}
+
+function updateSum() {
+  const d = draft;
+  const amt = parseNum(d.amountText);
+  const hint = $('#fBaseHint');
+  if (hint) {
+    const base = state.trip.base;
+    if (d.currency !== base && isFinite(amt)) {
+      hint.textContent = rateOf(d.currency) ? `≈ ${fmt(roundTo(toBase(amt, d.currency), base), base)} (1 ${d.currency} = ${rateOf(d.currency)} ${base})` : `${d.currency} のレートが未設定です (設定で入力)`;
+    } else hint.textContent = '';
+  }
+  const el = $('#shareSum');
+  if (!el) return;
+  if (!d.participants.length) { el.className = 'share-sum'; el.innerHTML = '<span>割り勘しない (精算に含めない)</span><span></span>'; return; }
+  if (d.mode === 'equal') {
+    el.className = 'share-sum';
+    el.innerHTML = `<span>${d.participants.length}人で均等</span><span class="num">1人 ${isFinite(amt) ? fmt(roundTo(amt / d.participants.length, d.currency), d.currency) : '—'}</span>`;
+    return;
+  }
+  const sum = d.participants.reduce((s, id) => s + (parseNum(d.shareText[id] ?? '') || 0), 0);
+  const diff = roundTo((isFinite(amt) ? amt : 0) - sum, d.currency);
+  el.className = 'share-sum' + (diff !== 0 ? ' bad' : '');
+  el.innerHTML = `<span>合計 <span class="num">${fmt(roundTo(sum, d.currency), d.currency)}</span></span><span>${diff === 0 ? '金額と一致' : diff > 0 ? `残り <span class="num">${fmt(diff, d.currency)}</span>` : `<span class="num">${fmt(-diff, d.currency)}</span> 超過`}</span>`;
+}
+
+function refreshEqualValues() {
+  if (draft.mode !== 'equal') return;
+  const eq = sharesOf({ ...draft, amount: parseNum(draft.amountText) || 0, mode: 'equal' });
+  state.members.forEach(m => { const i = document.getElementById('sh-' + m.id); if (i) i.value = draft.participants.includes(m.id) ? String(eq[m.id] ?? 0) : ''; });
+}
+
+function saveExpense() {
+  const d = draft;
+  const err = $('#fErr');
+  const amt = parseNum(d.amountText);
+  if (!d.name.trim()) { err.textContent = '名称を入力してください。'; $('#fName').focus(); return; }
+  if (!isFinite(amt) || amt <= 0) { err.textContent = '金額を正しく入力してください。'; $('#fAmount').focus(); return; }
+  if (!d.payer) { err.textContent = '支払い者を選んでください。'; return; }
+  const out = { id: d.id || uid(), cat: d.cat, name: d.name.trim(), amount: roundTo(amt, d.currency), currency: d.currency,
+    payer: d.payer, mode: d.mode, participants: state.members.map(m => m.id).filter(id => d.participants.includes(id)), shares: {},
+    createdAt: d.createdAt || Date.now() };
+  if (d.mode === 'custom') {
+    let sum = 0;
+    for (const id of out.participants) {
+      const v = parseNum(d.shareText[id] ?? '');
+      if (!isFinite(v) || v < 0) { err.textContent = `${memberName(id)} の金額を入力してください。`; return; }
+      out.shares[id] = roundTo(v, d.currency); sum += out.shares[id];
+    }
+    if (roundTo(sum, d.currency) !== out.amount) { err.textContent = '個人の金額の合計が金額と一致していません。'; return; }
+  }
+  const i = state.expenses.findIndex(e => e.id === out.id);
+  if (i >= 0) state.expenses[i] = out; else state.expenses.push(out);
+  save(); hideSheet();
+  if (view !== out.cat) setView(out.cat); else render();
+  toast(i >= 0 ? '保存しました' : '追加しました');
+}
+
+function showSheet() { $('#scrim').hidden = false; $('#sheet').hidden = false; document.body.style.overflow = 'hidden'; }
+function hideSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; document.body.style.overflow = ''; draft = null; }
+
+function setView(v) {
+  view = v;
+  try { localStorage.setItem(STORAGE_KEY + ':view', v); } catch (e) {}
+  render();
+  $('#main').scrollTop = 0;
+}
+
+/* ---------- rates ---------- */
+
+async function fetchRates() {
+  const date = state.trip.startDate;
+  if (!date) { toast('旅行開始日を入力してください'); return; }
+  const base = state.trip.base;
+  const targets = state.currencies.filter(c => c !== base);
+  const btn = document.querySelector('[data-act="fetch-rates"]');
+  if (btn) { btn.disabled = true; btn.textContent = '取得中…'; }
+  const failed = []; let usedDate = '';
+  await Promise.all(targets.map(async c => {
+    try {
+      const r = await fetch(`https://api.frankfurter.dev/v1/${date}?base=${c}&symbols=${base}`);
+      if (!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      const v = j.rates && j.rates[base];
+      if (!v) throw new Error('no rate');
+      state.rates[c] = Number(v.toPrecision(6));
+      usedDate = j.date || usedDate;
+    } catch (e) { failed.push(c); }
+  }));
+  const got = targets.length - failed.length;
+  if (got) state.rateNote = `取得日: ${usedDate}${usedDate !== date ? ` (${date} 以前で最新の公表値)` : ''}`;
+  save(); render();
+  toast(failed.length ? `${failed.join(', ')} は取得できませんでした。手入力してください` : 'レートを更新しました');
+}
+
+/* ---------- events ---------- */
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('button, [data-edit]');
+  if (!t) return;
+  if (t.dataset.view) return setView(t.dataset.view);
+  if (t.dataset.viewGo) return setView(t.dataset.viewGo);
+  if (t.id === 'fab') return openExpense(view);
+  if (t.dataset.edit) return openExpense(null, t.dataset.edit);
+  if (t.id === 'sheetClose') return hideSheet();
+
+  if (draft) {
+    if (t.dataset.fcat) { draft.cat = t.dataset.fcat; const c = CATS.find(c => c.id === draft.cat); $('#sheet').style.setProperty('--cat', `var(${c.color})`); document.querySelectorAll('[data-fcat]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+    if (t.dataset.payer) { draft.payer = t.dataset.payer; document.querySelectorAll('[data-payer]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+    if (t.dataset.mode) {
+      if (t.dataset.mode === 'custom' && draft.mode === 'equal') {
+        const eq = sharesOf({ ...draft, amount: parseNum(draft.amountText) || 0, mode: 'equal' });
+        draft.shareText = Object.fromEntries(Object.entries(eq).map(([k, v]) => [k, String(v)]));
+      }
+      draft.mode = t.dataset.mode;
+      document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b === t));
+      renderShares(); return;
+    }
+  }
+
+  switch (t.dataset.act) {
+    case 'save-exp': return saveExpense();
+    case 'del-exp':
+      if (t.dataset.armed) {
+        state.expenses = state.expenses.filter(e => e.id !== draft.id); save(); hideSheet(); render(); toast('削除しました');
+      } else { t.dataset.armed = '1'; t.textContent = 'もう一度押して削除'; }
+      return;
+    case 'start-new': state = emptyState(); save(); setView('settings'); toast('設定で旅行とメンバーを入力してください'); return;
+    case 'add-cur': {
+      const c = $('#addCur').value; if (!c || state.currencies.includes(c)) return;
+      state.currencies.push(c); state.sample = false; save(); render(); toast(`${c} を追加しました`); return;
+    }
+    case 'fetch-rates': fetchRates(); return;
+    case 'export': {
+      const text = JSON.stringify(state);
+      const done = () => toast('データをコピーしました');
+      const fallback = () => { $('#importBox').hidden = false; const ta = $('#importText'); ta.value = text; ta.select(); toast('選択された文字をコピーしてください'); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+      return;
+    }
+    case 'import-open': $('#importBox').hidden = false; $('#importText').value = ''; $('#importText').focus(); return;
+    case 'import':
+      try {
+        const s = JSON.parse($('#importText').value);
+        if (!s || !s.trip || !Array.isArray(s.expenses)) throw new Error();
+        state = normalize(s); save(); render(); toast('読み込みました');
+      } catch (e) { toast('データの形式が正しくありません'); }
+      return;
+    case 'reset-ask': $('#resetConfirm').hidden = false; t.hidden = true; return;
+    case 'reset-cancel': $('#resetConfirm').hidden = true; $('#resetBtn').hidden = false; return;
+    case 'reset': state = emptyState(); save(); render(); toast('消去しました'); return;
+  }
+
+  if (t.dataset.delCur) {
+    const c = t.dataset.delCur;
+    if (state.expenses.some(e => e.currency === c)) { toast(`${c} を使っている費用があるため削除できません`); return; }
+    state.currencies = state.currencies.filter(x => x !== c); delete state.rates[c]; save(); render(); return;
+  }
+  if (t.dataset.delMem) {
+    const id = t.dataset.delMem;
+    if (state.expenses.some(e => e.payer === id || e.participants.includes(id))) { toast('費用で使われているメンバーは削除できません'); return; }
+    state.members = state.members.filter(m => m.id !== id); save(); render(); return;
+  }
+});
+
+$('#scrim').addEventListener('click', hideSheet);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && draft) hideSheet(); });
+
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (draft) {
+    if (t.id === 'fName') { draft.name = t.value; return; }
+    if (t.id === 'fAmount') { draft.amountText = t.value; refreshEqualValues(); updateSum(); return; }
+    if (t.dataset.share) { draft.shareText[t.dataset.share] = t.value; updateSum(); return; }
+  }
+  if (t.id === 'setName') { state.trip.name = t.value; state.sample = false; save(); $('#hdrName').textContent = t.value || '旅行'; return; }
+  if (t.dataset.rate) {
+    const v = parseNum(t.value);
+    if (t.value.trim() === '') delete state.rates[t.dataset.rate]; else if (isFinite(v) && v > 0) state.rates[t.dataset.rate] = v;
+    state.sample = false; save();
+    const base = state.trip.base;
+    $('#hdrTotal').textContent = fmt(roundTo(state.expenses.reduce((s, e) => s + toBase(e.amount, e.currency), 0), base), base);
+    return;
+  }
+  if (t.dataset.mem) { const m = state.members.find(m => m.id === t.dataset.mem); if (m) { m.name = t.value; save(); } return; }
+});
+
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (draft) {
+    if (t.id === 'fCur') { draft.currency = t.value; refreshEqualValues(); updateSum(); return; }
+    if (t.dataset.part) {
+      const id = t.dataset.part;
+      if (t.checked) { if (!draft.participants.includes(id)) draft.participants.push(id); }
+      else draft.participants = draft.participants.filter(x => x !== id);
+      renderShares(); return;
+    }
+  }
+  if (t.id === 'setDate') { state.trip.startDate = t.value; state.sample = false; save(); render(); toast('開始日を変更しました。必要ならレートを取得し直してください'); return; }
+  if (t.id === 'setBase') {
+    const old = state.trip.base, nb = t.value;
+    // Re-express stored rates against the new settlement currency when possible.
+    const oldToNew = state.rates[nb];
+    const rates = {};
+    if (oldToNew) {
+      for (const c of state.currencies) if (c !== nb) rates[c] = c === old ? Number((1 / oldToNew).toPrecision(6)) : state.rates[c] ? Number((state.rates[c] / oldToNew).toPrecision(6)) : undefined;
+    }
+    Object.keys(rates).forEach(k => rates[k] === undefined && delete rates[k]);
+    state.trip.base = nb; state.rates = rates;
+    if (!state.currencies.includes(nb)) state.currencies.unshift(nb);
+    state.sample = false; save(); render(); toast(`精算通貨を ${nb} にしました`); return;
+  }
+  if (t.dataset.mem) render();
+});
+
+document.addEventListener('submit', ev => {
+  if (ev.target.id !== 'addMemForm') return;
+  ev.preventDefault();
+  const name = $('#newMem').value.trim();
+  if (!name) return;
+  state.members.push({ id: uid(), name }); state.sample = false; save(); render();
+  setTimeout(() => $('#newMem')?.focus(), 0);
+});
+
+/* Enter in the name field jumps to amount; Enter in amount saves. */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !draft || e.isComposing) return;
+  if (e.target.id === 'fName') { e.preventDefault(); $('#fAmount').focus(); }
+  else if (e.target.id === 'fAmount') { e.preventDefault(); saveExpense(); }
+});
+
+render();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>

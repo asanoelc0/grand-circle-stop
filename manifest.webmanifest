@@ -1,0 +1,13 @@
+{
+  "name": "旅費精算帳",
+  "short_name": "旅費精算",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f4",
+  "theme_color": "#0f5c5a",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
