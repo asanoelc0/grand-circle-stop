@@ -87,10 +87,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .trip-total .label { font-size: 11px; letter-spacing: .08em; opacity: .8; }
 .trip-total .num { font-size: 24px; font-weight: 600; }
 
+.filerow { display: flex; gap: 8px; margin-top: 10px; }
 .filebar {
-  display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; text-align: left;
   background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); color: inherit; border-radius: 10px; padding: 7px 10px;
 }
+.quicksave {
+  flex: none; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 10px; padding: 7px 14px;
+  font-size: 14px; font-weight: 700; color: inherit; background: transparent; border: 1px solid rgba(255,255,255,.35);
+}
+.quicksave svg { width: 18px; height: 18px; }
+.quicksave.attn { background: var(--head-ink); color: var(--head-bg); border-color: var(--head-ink); }
+.quicksave:disabled { opacity: .4; cursor: not-allowed; }
 .filebar svg { width: 18px; height: 18px; flex: none; }
 .filebar .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 700; }
 .pill { flex: none; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
@@ -268,11 +276,17 @@ textarea.input { font-family: var(--font-num); font-size: 12px; min-height: 120p
       <span class="trip-date" id="hdrDate"></span>
     </div>
     <div class="trip-total"><span class="label">合計</span><span class="num" id="hdrTotal"></span></div>
+    <div class="filerow">
     <button class="filebar" type="button" id="fileBar" aria-label="ファイル">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
       <span class="fname" id="fileName"></span>
       <span class="pill" id="filePill"></span>
     </button>
+    <button class="quicksave" type="button" id="quickSave">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg>
+      <span>保存</span>
+    </button>
+    </div>
   </header>
 <input type="file" id="fileInput" accept=".json,application/json" hidden>
 
@@ -440,7 +454,7 @@ function fmtTime(iso) {
 
 function fileStatus() {
   if (state.sample) return { cls: 'none', text: 'サンプル', name: 'サンプルデータ (ファイルなし)' };
-  if (!fileMeta.name) return { cls: 'warn', text: '未保存', name: 'ファイルに保存していません' };
+  if (!fileMeta.name) return { cls: 'warn', text: '未保存', name: 'ファイルなし' };
   if (fileMeta.linked && !handleReady) return { cls: 'warn', text: '再接続が必要', name: fileMeta.name };
   if (fileMeta.linked && handleReady) return { cls: fileMeta.dirty ? 'warn' : 'ok', text: fileMeta.dirty ? '書き込み中…' : '自動保存', name: fileMeta.name };
   if (fileMeta.dirty) return { cls: 'warn', text: '変更あり', name: fileMeta.name };
@@ -451,6 +465,10 @@ function renderFileBar() {
   const st = fileStatus();
   $('#fileName').textContent = st.name;
   const pill = $('#filePill'); pill.className = 'pill ' + st.cls; pill.textContent = st.text;
+  const qs = $('#quickSave');
+  qs.disabled = state.sample;
+  qs.classList.toggle('attn', !state.sample && (fileMeta.dirty || !fileMeta.name));
+  qs.setAttribute('aria-label', fileMeta.name ? `${fileMeta.name} に上書き保存` : 'ファイルに保存');
   if (fileSheetOpen) renderFileSheet();
 }
 
@@ -1113,6 +1131,7 @@ document.addEventListener('click', ev => {
   if (t.dataset.edit) return openExpense(null, t.dataset.edit);
   if (t.id === 'sheetClose') return hideSheet();
   if (t.id === 'fileBar') return openFileSheet();
+  if (t.id === 'quickSave') return saveToFile(false);
 
   if (draft) {
     if (t.dataset.fcat) { draft.cat = t.dataset.fcat; const c = CATS.find(c => c.id === draft.cat); $('#sheet').style.setProperty('--cat', `var(${c.color})`); document.querySelectorAll('[data-fcat]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
@@ -1179,6 +1198,9 @@ document.addEventListener('click', ev => {
 });
 
 $('#scrim').addEventListener('click', hideSheet);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveToFile(false); }
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && draft) hideSheet(); });
 
 document.addEventListener('input', ev => {
