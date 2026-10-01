@@ -229,6 +229,12 @@ main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scr
 .share-sum { display: flex; justify-content: space-between; font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .share-sum.bad { color: var(--bad); font-weight: 700; }
 
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 700; }
+.switch input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; margin: 0; cursor: pointer; transition: background .15s; flex: none; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch input:checked { background: var(--cat, var(--accent)); }
+.switch input:checked::after { transform: translateX(18px); }
+.linkbtn { background: none; border: 0; padding: 4px 0; color: var(--cat, var(--accent)); font-size: 13px; font-weight: 700; cursor: pointer; }
 .split-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 
 .hint { font-size: 12px; color: var(--muted); }
@@ -996,12 +1002,16 @@ function renderExpenseForm() {
     <div class="field"><span class="lbl">支払い者</span>
       <div class="chips">${state.members.map(m => `<button type="button" class="chip" data-payer="${m.id}" aria-pressed="${m.id === d.payer}">${esc(m.name)}</button>`).join('') || '<span class="hint">設定でメンバーを追加してください</span>'}</div></div>
     <div class="field">
-      <div class="split-head"><span class="lbl">割り勘 (個人の金額)</span>
-        <div class="seg" role="group" aria-label="割り方">
+      <div class="split-head">
+        <label class="switch"><input type="checkbox" id="fSplit" ${d.participants.length ? 'checked' : ''}>割り勘</label>
+        <div class="seg" role="group" aria-label="割り方" id="splitMode">
           <button type="button" data-mode="equal" aria-pressed="${d.mode === 'equal'}">均等</button>
           <button type="button" data-mode="custom" aria-pressed="${d.mode === 'custom'}">個別に入力</button>
         </div></div>
-      <div class="share-list" id="shareList"></div>
+      <div id="splitBody">
+        <div class="split-head" style="margin-bottom:4px"><span class="lbl">個人の金額</span><button type="button" class="linkbtn" data-act="split-all" id="splitAll">全員を選択</button></div>
+        <div class="share-list" id="shareList"></div>
+      </div>
       <div class="share-sum" id="shareSum"></div>
     </div>
     <div class="err" id="fErr"></div>`;
@@ -1014,7 +1024,12 @@ function renderExpenseForm() {
 function renderShares() {
   const d = draft;
   const list = $('#shareList');
-  const eq = d.mode === 'equal' ? sharesOf({ ...d, mode: 'equal' }) : null;
+  const on = d.participants.length > 0;
+  $('#fSplit').checked = on;
+  $('#splitBody').hidden = !on;
+  $('#splitMode').hidden = !on;
+  $('#splitAll').hidden = d.participants.length === state.members.length;
+  const eq = d.mode === 'equal' ? sharesOf({ ...d, amount: parseNum(d.amountText) || 0, mode: 'equal' }) : null;
   list.innerHTML = state.members.map(m => {
     const on = d.participants.includes(m.id);
     const val = d.mode === 'equal' ? (on ? String(eq[m.id] ?? 0) : '') : (on ? (d.shareText[m.id] ?? '') : '');
@@ -1025,6 +1040,16 @@ function renderShares() {
     </label>`;
   }).join('');
   updateSum();
+}
+
+/* Turning the split on (or 全員を選択) includes every member; individual amounts start from an equal split. */
+function setParticipantsAll(on) {
+  draft.participants = on ? state.members.map(m => m.id) : [];
+  if (on && draft.mode === 'custom') {
+    const eq = sharesOf({ ...draft, amount: parseNum(draft.amountText) || 0, mode: 'equal' });
+    draft.shareText = Object.fromEntries(Object.entries(eq).map(([k, v]) => [k, String(v)]));
+  }
+  renderShares();
 }
 
 function updateSum() {
@@ -1039,7 +1064,7 @@ function updateSum() {
   }
   const el = $('#shareSum');
   if (!el) return;
-  if (!d.participants.length) { el.className = 'share-sum'; el.innerHTML = '<span>割り勘しない (精算に含めない)</span><span></span>'; return; }
+  if (!d.participants.length) { el.className = 'share-sum'; el.innerHTML = '<span>割り勘しない (支払い者の負担として精算に含めない)</span><span></span>'; return; }
   if (d.mode === 'equal') {
     el.className = 'share-sum';
     el.innerHTML = `<span>${d.participants.length}人で均等</span><span class="num">1人 ${isFinite(amt) ? fmt(roundTo(amt / d.participants.length, d.currency), d.currency) : '—'}</span>`;
@@ -1149,6 +1174,7 @@ document.addEventListener('click', ev => {
 
   switch (t.dataset.act) {
     case 'save-exp': return saveExpense();
+    case 'split-all': setParticipantsAll(true); return;
     case 'del-exp':
       if (t.dataset.armed) {
         state.expenses = state.expenses.filter(e => e.id !== draft.id); save(); hideSheet(); render(); toast('削除しました');
@@ -1226,6 +1252,7 @@ document.addEventListener('change', ev => {
   const t = ev.target;
   if (draft) {
     if (t.id === 'fCur') { draft.currency = t.value; refreshEqualValues(); updateSum(); return; }
+    if (t.id === 'fSplit') { setParticipantsAll(t.checked); return; }
     if (t.dataset.part) {
       const id = t.dataset.part;
       if (t.checked) { if (!draft.participants.includes(id)) draft.participants.push(id); }
