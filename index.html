@@ -27,6 +27,8 @@
   --on-cat: #ffffff;
   --head-bg: #0f5c5a;
   --head-ink: #ffffff;
+  --pill-ok-bg: #d6f0e0;
+  --pill-ok-ink: #145c33;
   --good: #1d7a45;
   --bad: #b3372b;
   --warn-bg: #fff4d6;
@@ -44,7 +46,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1413; --surface: #172120; --ink: #e6eeec; --muted: #9aaba7; --line: #2a3735;
-    --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec;
+    --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec; --pill-ok-bg: #1d4a32; --pill-ok-ink: #a6e8bf;
     --good: #5fcf8c; --bad: #ff8a7a; --warn-bg: #3a2f10; --warn-ink: #f4d58a;
     --c-hotel: #a79bff; --c-tour: #8fd47a; --c-move: #7ab8ee; --c-local: #f0ad55;
     --shadow: 0 1px 2px rgba(0,0,0,.4);
@@ -53,7 +55,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #0e1413; --surface: #172120; --ink: #e6eeec; --muted: #9aaba7; --line: #2a3735;
-  --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec;
+  --accent: #5cc3bb; --accent-ink: #062422; --accent-soft: #1b3533; --on-cat: #10201e; --head-bg: #15393a; --head-ink: #e6eeec; --pill-ok-bg: #1d4a32; --pill-ok-ink: #a6e8bf;
   --good: #5fcf8c; --bad: #ff8a7a; --warn-bg: #3a2f10; --warn-ink: #f4d58a;
   --c-hotel: #a79bff; --c-tour: #8fd47a; --c-move: #7ab8ee; --c-local: #f0ad55;
   --shadow: 0 1px 2px rgba(0,0,0,.4);
@@ -84,6 +86,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .trip-total { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
 .trip-total .label { font-size: 11px; letter-spacing: .08em; opacity: .8; }
 .trip-total .num { font-size: 24px; font-weight: 600; }
+
+.filebar {
+  display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; cursor: pointer; text-align: left;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); color: inherit; border-radius: 10px; padding: 7px 10px;
+}
+.filebar svg { width: 18px; height: 18px; flex: none; }
+.filebar .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 700; }
+.pill { flex: none; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--pill-ok-bg); color: var(--pill-ok-ink); }
+.pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.pill.none { background: rgba(255,255,255,.2); color: inherit; }
+
+.fileinfo { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; margin: 0 0 14px; }
+.fileinfo dt { color: var(--muted); font-size: 12px; padding-top: 2px; }
+.fileinfo dd { margin: 0; min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.stack .btn { width: 100%; padding: 12px; }
+.where { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 12px 0 0; }
+.where strong { color: var(--ink); }
+.subhead { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin: 18px 0 8px; }
 
 main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scrolling: touch; }
 
@@ -246,7 +268,13 @@ textarea.input { font-family: var(--font-num); font-size: 12px; min-height: 120p
       <span class="trip-date" id="hdrDate"></span>
     </div>
     <div class="trip-total"><span class="label">合計</span><span class="num" id="hdrTotal"></span></div>
+    <button class="filebar" type="button" id="fileBar" aria-label="ファイル">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+      <span class="fname" id="fileName"></span>
+      <span class="pill" id="filePill"></span>
+    </button>
   </header>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
 
   <main id="main"></main>
 
@@ -353,14 +381,286 @@ function normalize(s) {
 }
 
 let storageOk = true;
-function save() {
+function save(opts) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); storageOk = true; }
   catch (e) { if (storageOk) toast('この端末に保存できませんでした (プライベートモード?)'); storageOk = false; }
+  if (!(opts && opts.clean)) fileChanged();
 }
 
 let state = load();
 let view = (() => { try { return localStorage.getItem(STORAGE_KEY + ':view') || 'hotel'; } catch (e) { return 'hotel'; } })();
 if (!VIEWS.some(v => v.id === view)) view = 'hotel';
+
+
+/* ---------- save file ----------
+   The working copy lives in localStorage so the app reopens where it left off.
+   The save file (.json) is what the user keeps: it is written to a place they choose,
+   and the header always shows which file the data belongs to and whether it is saved. */
+
+const FILE_KEY = STORAGE_KEY + ':file';
+let fileMeta = (() => {
+  try { return JSON.parse(localStorage.getItem(FILE_KEY)) || {}; } catch (e) { return {}; }
+})();
+// name: file name, savedAt: ISO time of last write/open, dirty: changed since then, linked: has a writable handle
+fileMeta = { name: null, savedAt: null, dirty: false, linked: false, ...fileMeta };
+let fileHandle = null;      // FileSystemFileHandle when the browser supports writing to a chosen file
+let handleReady = false;    // permission granted for fileHandle
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const hasFSAccess = typeof window.showSaveFilePicker === 'function' && window.self === window.top;
+let downloadsCap = null;
+if (window.claude && typeof window.claude.use === 'function') {
+  window.claude.use('downloads').then(d => { downloadsCap = d; }).catch(() => {});
+}
+
+function persistMeta() { try { localStorage.setItem(FILE_KEY, JSON.stringify(fileMeta)); } catch (e) {} }
+
+function fileChanged() {
+  if (state.sample) return;
+  fileMeta.dirty = true;
+  persistMeta();
+  if (fileHandle && handleReady) scheduleWrite();
+  renderFileBar();
+}
+
+function suggestedName() {
+  const clean = s => String(s || '').replace(/[\\/:*?"<>|\s]+/g, '_').replace(/^_+|_+$/g, '');
+  return `旅費_${clean(state.trip.name) || '旅行'}_${state.trip.startDate || ''}.json`.replace('_.json', '.json');
+}
+
+function fileText() {
+  return JSON.stringify({ app: 'travel-ledger', version: 1, savedAt: new Date().toISOString(), data: state }, null, 2);
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fileStatus() {
+  if (state.sample) return { cls: 'none', text: 'サンプル', name: 'サンプルデータ (ファイルなし)' };
+  if (!fileMeta.name) return { cls: 'warn', text: '未保存', name: 'ファイルに保存していません' };
+  if (fileMeta.linked && !handleReady) return { cls: 'warn', text: '再接続が必要', name: fileMeta.name };
+  if (fileMeta.linked && handleReady) return { cls: fileMeta.dirty ? 'warn' : 'ok', text: fileMeta.dirty ? '書き込み中…' : '自動保存', name: fileMeta.name };
+  if (fileMeta.dirty) return { cls: 'warn', text: '変更あり', name: fileMeta.name };
+  return { cls: 'ok', text: '保存済み', name: fileMeta.name };
+}
+
+function renderFileBar() {
+  const st = fileStatus();
+  $('#fileName').textContent = st.name;
+  const pill = $('#filePill'); pill.className = 'pill ' + st.cls; pill.textContent = st.text;
+  if (fileSheetOpen) renderFileSheet();
+}
+
+/* IndexedDB keeps the file handle so the same file reopens on next launch (Chrome/Edge). */
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('travel-ledger', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(k, v) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); v === undefined ? tx.objectStore('kv').delete(k) : tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+
+async function restoreHandle() {
+  if (!hasFSAccess || !fileMeta.linked) return;
+  try {
+    fileHandle = await idbGet('handle');
+    if (!fileHandle) { fileMeta.linked = false; persistMeta(); }
+    else handleReady = (await fileHandle.queryPermission({ mode: 'readwrite' })) === 'granted';
+  } catch (e) { fileHandle = null; fileMeta.linked = false; persistMeta(); }
+  renderFileBar();
+}
+
+async function reconnect() {
+  if (!fileHandle) return;
+  try {
+    handleReady = (await fileHandle.requestPermission({ mode: 'readwrite' })) === 'granted';
+    if (handleReady) { await writeHandle(); toast(`${fileMeta.name} に接続しました`); }
+  } catch (e) { toast('ファイルに接続できませんでした'); }
+  renderFileBar();
+}
+
+let writeTimer;
+function scheduleWrite() { clearTimeout(writeTimer); writeTimer = setTimeout(writeHandle, 500); }
+async function writeHandle() {
+  try {
+    const w = await fileHandle.createWritable();
+    await w.write(fileText()); await w.close();
+    fileMeta.dirty = false; fileMeta.savedAt = new Date().toISOString(); persistMeta();
+  } catch (e) { handleReady = false; toast('ファイルに書き込めませんでした。再接続してください'); }
+  renderFileBar();
+}
+
+function markSaved(name, linked) {
+  fileMeta = { name, savedAt: new Date().toISOString(), dirty: false, linked: !!linked };
+  persistMeta(); renderFileBar();
+}
+
+/* Save: choose a location when the browser allows it; otherwise hand the file to the
+   share sheet (iPhone: 「"ファイル"に保存」) or the Downloads folder. */
+async function saveToFile(saveAs) {
+  if (state.sample) { toast('サンプルは保存できません。新しい旅行を始めてください'); return; }
+  if (fileHandle && handleReady && !saveAs) { await writeHandle(); toast(`${fileMeta.name} に保存しました`); return; }
+  const name = (!saveAs && fileMeta.name) || suggestedName();
+  const text = fileText();
+
+  if (hasFSAccess) {
+    try {
+      const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: '旅費精算データ', accept: { 'application/json': ['.json'] } }] });
+      fileHandle = h; handleReady = true;
+      try { await idbSet('handle', h); } catch (e) {}
+      fileMeta.name = h.name; fileMeta.linked = true;
+      await writeHandle();
+      markSaved(h.name, true);
+      toast(`${h.name} に保存しました。以後は自動で保存されます`);
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      // fall through (e.g. not allowed in this frame)
+    }
+  }
+
+  if (downloadsCap) {
+    try {
+      await downloadsCap.save({ filename: name, data: text });
+      markSaved(name, false); toast(`${name} を保存しました`);
+    } catch (e) {
+      if (e && e.code === 'declined') return;
+      if (e && e.code === 'rate_limited') { toast('少し待ってからもう一度押してください'); return; }
+      toast('この画面ではファイルに保存できません');
+    }
+    return;
+  }
+
+  const file = new File([text], name, { type: 'application/json' });
+  if (isIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      markSaved(name, false); toast(`${name} を保存しました`);
+    } catch (e) { if (!(e && e.name === 'AbortError')) toast('保存できませんでした'); }
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  markSaved(name, false); toast(`${name} をダウンロードフォルダに保存しました`);
+}
+
+function parseFileData(text) {
+  const j = JSON.parse(text);
+  const s = j && j.app === 'travel-ledger' ? j.data : j;
+  if (!s || !s.trip || !Array.isArray(s.expenses)) throw new Error('format');
+  s.sample = false;
+  return normalize(s);
+}
+
+function applyOpened(s, name, savedAt, handle) {
+  state = s;
+  fileHandle = handle || null; handleReady = !!handle;
+  if (!handle) idbSet('handle', undefined).catch(() => {});
+  save({ clean: true });
+  fileMeta = { name, savedAt, dirty: false, linked: !!handle };
+  persistMeta(); hideSheet(); render();
+  toast(`${name} を開きました`);
+}
+
+async function openFile() {
+  if (hasFSAccess && typeof window.showOpenFilePicker === 'function') {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: [{ description: '旅費精算データ', accept: { 'application/json': ['.json'] } }] });
+      const f = await h.getFile();
+      const s = parseFileData(await f.text());
+      try { await idbSet('handle', h); } catch (e) {}
+      const granted = (await h.requestPermission({ mode: 'readwrite' })) === 'granted';
+      applyOpened(s, f.name, new Date(f.lastModified).toISOString(), granted ? h : null);
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      if (e && e.message === 'format') { toast('旅費精算帳のファイルではありません'); return; }
+      if (e instanceof SyntaxError) { toast('ファイルの中身を読み取れませんでした'); return; }
+    }
+  }
+  $('#fileInput').value = '';
+  $('#fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', async ev => {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  try { applyOpened(parseFileData(await f.text()), f.name, new Date(f.lastModified).toISOString(), null); }
+  catch (e) { toast(e.message === 'format' ? '旅費精算帳のファイルではありません' : 'ファイルの中身を読み取れませんでした'); }
+});
+
+function startNewTrip() {
+  state = emptyState();
+  fileHandle = null; handleReady = false; idbSet('handle', undefined).catch(() => {});
+  fileMeta = { name: null, savedAt: null, dirty: false, linked: false };
+  persistMeta(); save({ clean: true });
+}
+
+let fileSheetOpen = false;
+function openFileSheet() {
+  fileSheetOpen = true;
+  $('#sheet').style.setProperty('--cat', 'var(--accent)');
+  $('#sheetTitle').textContent = 'ファイル';
+  renderFileSheet();
+  showSheet();
+}
+
+function whereText() {
+  if (hasFSAccess) return '保存先を選ぶ画面が開きます。<strong>ドキュメント</strong>などわかりやすいフォルダを選ぶと、以後はそのファイルに自動で上書き保存されます。';
+  if (downloadsCap) return '確認画面で保存を押すと、<strong>ダウンロード</strong>フォルダ (iPhoneのClaudeアプリでは共有メニュー) に保存されます。';
+  if (isIOS) return '共有メニューが開きます。<strong>「"ファイル"に保存」</strong>を選び、<strong>iCloud Drive</strong> や <strong>このiPhone内</strong> の中から保存場所を選んでください。ファイルアプリから見られます。';
+  return '<strong>ダウンロード</strong>フォルダに保存されます。スマホでは「Files」や「マイファイル」アプリの「ダウンロード」から見られます。';
+}
+
+function renderFileSheet() {
+  const st = fileStatus();
+  const isSample = state.sample;
+
+  $('#sheetBody').innerHTML = `
+    <dl class="fileinfo">
+      <dt>開いているファイル</dt><dd>${esc(st.name)}</dd>
+      <dt>状態</dt><dd><span class="pill ${st.cls}" style="${st.cls === 'none' ? 'background:var(--line)' : ''}">${st.text}</span></dd>
+      ${fileMeta.savedAt && !isSample ? `<dt>最後に保存</dt><dd class="num">${fmtTime(fileMeta.savedAt)}</dd>` : ''}
+    </dl>
+    ${fileMeta.linked && !handleReady && !isSample ? `<button class="btn primary" type="button" data-act="file-reconnect" style="width:100%;margin-bottom:8px">${esc(fileMeta.name)} に再接続</button>` : ''}
+    <div class="stack">
+      <button class="btn primary" type="button" data-act="file-save" ${isSample ? 'disabled' : ''}>${fileMeta.name ? '上書き保存' : 'ファイルに保存'}</button>
+      ${fileMeta.name ? `<button class="btn" type="button" data-act="file-saveas">別の名前で保存</button>` : ''}
+      <button class="btn" type="button" data-act="file-open">ファイルを開く</button>
+      <button class="btn" type="button" data-act="file-new">新しい旅行</button>
+    </div>
+    <div id="fileWarn" hidden class="banner" style="margin:10px 0 0"></div>
+    <p class="where">${whereText()}</p>
+    <p class="hint" style="margin:10px 0 0">入力中のデータはアプリ内にも自動で残るので、次に開いたときは続きから始まります。ファイルは手元に残す控えです。</p>
+    <div class="subhead">文字でやりとりする</div>
+    <div class="row">
+      <button class="btn grow small" type="button" data-act="export">データをコピー</button>
+      <button class="btn grow small" type="button" data-act="import-open">データを貼り付け</button>
+    </div>
+    <div id="importBox" hidden style="margin-top:10px">
+      <textarea class="input" id="importText" placeholder="コピーしたデータを貼り付け"></textarea>
+      <button class="btn primary" type="button" data-act="import" style="width:100%;margin-top:8px">読み込む (今のデータは置き換わります)</button>
+    </div>`;
+  $('#sheetFoot').innerHTML = '';
+  $('#sheetFoot').hidden = true;
+}
+
+/* Opening or starting over while there are unsaved changes asks once inside the sheet. */
+function guarded(act, run) {
+  const unsaved = !state.sample && (fileMeta.dirty || !fileMeta.name) && state.expenses.length > 0 && !(fileMeta.linked && handleReady);
+  const w = $('#fileWarn');
+  if (!unsaved || (w && w.dataset.armed === act)) { run(); return; }
+  w.hidden = false; w.dataset.armed = act;
+  w.innerHTML = `<span>保存していない変更があります。${act === 'file-open' ? '開く' : '新しく始める'}と今のデータは置き換わります。</span><button type="button" data-act="${act}">続ける</button>`;
+}
 
 /* ---------- money ---------- */
 
@@ -434,6 +734,7 @@ function render() {
   fab.hidden = !cat;
   if (cat) { fab.style.setProperty('--cat', `var(${cat.color})`); $('#fabLabel').textContent = cat.label + 'を追加'; }
 
+  renderFileBar();
   const main = $('#main');
   let html = '';
   if (state.sample) {
@@ -621,16 +922,9 @@ function renderSettings() {
   </div>
 
   <div class="card">
-    <h3>バックアップ</h3>
-    <p class="note">データはこの端末のブラウザに保存されています。機種変更の前などにコピーしておけます。</p>
-    <div class="row">
-      <button class="btn grow" type="button" data-act="export">データをコピー</button>
-      <button class="btn grow" type="button" data-act="import-open">データを貼り付け</button>
-    </div>
-    <div id="importBox" hidden style="margin-top:10px">
-      <textarea class="input" id="importText" placeholder="コピーしたデータを貼り付け"></textarea>
-      <button class="btn primary" type="button" data-act="import" style="width:100%;margin-top:8px">読み込む (今のデータは置き換わります)</button>
-    </div>
+    <h3>ファイル</h3>
+    <p class="note">旅行のデータは .json ファイルとして好きな場所に保存し、あとから開けます。</p>
+    <button class="btn" type="button" data-act="file-sheet" style="width:100%">ファイルの保存・読み込み</button>
   </div>
 
   <div class="card">
@@ -772,7 +1066,7 @@ function saveExpense() {
 }
 
 function showSheet() { $('#scrim').hidden = false; $('#sheet').hidden = false; document.body.style.overflow = 'hidden'; }
-function hideSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; document.body.style.overflow = ''; draft = null; }
+function hideSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; $('#sheetFoot').hidden = false; document.body.style.overflow = ''; draft = null; fileSheetOpen = false; }
 
 function setView(v) {
   view = v;
@@ -818,6 +1112,7 @@ document.addEventListener('click', ev => {
   if (t.id === 'fab') return openExpense(view);
   if (t.dataset.edit) return openExpense(null, t.dataset.edit);
   if (t.id === 'sheetClose') return hideSheet();
+  if (t.id === 'fileBar') return openFileSheet();
 
   if (draft) {
     if (t.dataset.fcat) { draft.cat = t.dataset.fcat; const c = CATS.find(c => c.id === draft.cat); $('#sheet').style.setProperty('--cat', `var(${c.color})`); document.querySelectorAll('[data-fcat]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
@@ -840,14 +1135,20 @@ document.addEventListener('click', ev => {
         state.expenses = state.expenses.filter(e => e.id !== draft.id); save(); hideSheet(); render(); toast('削除しました');
       } else { t.dataset.armed = '1'; t.textContent = 'もう一度押して削除'; }
       return;
-    case 'start-new': state = emptyState(); save(); setView('settings'); toast('設定で旅行とメンバーを入力してください'); return;
+    case 'start-new': startNewTrip(); hideSheet(); setView('settings'); toast('設定で旅行とメンバーを入力してください'); return;
+    case 'file-sheet': openFileSheet(); return;
+    case 'file-save': saveToFile(false); return;
+    case 'file-saveas': saveToFile(true); return;
+    case 'file-reconnect': reconnect(); return;
+    case 'file-open': guarded('file-open', openFile); return;
+    case 'file-new': guarded('file-new', () => { startNewTrip(); hideSheet(); setView('settings'); toast('設定で旅行とメンバーを入力してください'); }); return;
     case 'add-cur': {
       const c = $('#addCur').value; if (!c || state.currencies.includes(c)) return;
       state.currencies.push(c); state.sample = false; save(); render(); toast(`${c} を追加しました`); return;
     }
     case 'fetch-rates': fetchRates(); return;
     case 'export': {
-      const text = JSON.stringify(state);
+      const text = fileText();
       const done = () => toast('データをコピーしました');
       const fallback = () => { $('#importBox').hidden = false; const ta = $('#importText'); ta.value = text; ta.select(); toast('選択された文字をコピーしてください'); };
       if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
@@ -856,14 +1157,13 @@ document.addEventListener('click', ev => {
     case 'import-open': $('#importBox').hidden = false; $('#importText').value = ''; $('#importText').focus(); return;
     case 'import':
       try {
-        const s = JSON.parse($('#importText').value);
-        if (!s || !s.trip || !Array.isArray(s.expenses)) throw new Error();
-        state = normalize(s); save(); render(); toast('読み込みました');
+        const s = parseFileData($('#importText').value);
+        s.sample = false; state = normalize(s); save(); hideSheet(); render(); toast('読み込みました');
       } catch (e) { toast('データの形式が正しくありません'); }
       return;
     case 'reset-ask': $('#resetConfirm').hidden = false; t.hidden = true; return;
     case 'reset-cancel': $('#resetConfirm').hidden = true; $('#resetBtn').hidden = false; return;
-    case 'reset': state = emptyState(); save(); render(); toast('消去しました'); return;
+    case 'reset': startNewTrip(); render(); toast('消去しました'); return;
   }
 
   if (t.dataset.delCur) {
@@ -945,6 +1245,7 @@ document.addEventListener('keydown', e => {
 });
 
 render();
+restoreHandle();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
