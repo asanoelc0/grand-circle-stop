@@ -141,6 +141,10 @@ main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scr
 .item .amt { font-weight: 600; text-align: right; }
 .item .meta { font-size: 12px; color: var(--muted); min-width: 0; }
 .item .base { font-size: 12px; color: var(--muted); text-align: right; }
+.item.cancelled .name { color: var(--muted); }
+.item .was { text-decoration: line-through; color: var(--muted); font-weight: 500; font-size: 12px; margin-right: 6px; }
+.tag-cancel { display: inline-block; font-size: 11px; font-weight: 700; color: var(--bad); border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; margin-left: 6px; vertical-align: 2px; }
+.cancel-box { background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
 .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--cat); }
 
 .empty { text-align: center; color: var(--muted); padding: 40px 12px; font-size: 14px; }
@@ -703,6 +707,8 @@ function fmt(v, cur) {
 }
 function rateOf(cur) { return cur === state.trip.base ? 1 : Number(state.rates[cur]) || 0; }
 function toBase(v, cur) { return v * rateOf(cur); }
+/* A cancelled booking only costs its cancellation fee; the split keeps the same proportions. */
+function effAmount(e) { return e.cancelled ? (Number(e.cancelFee) || 0) : e.amount; }
 
 /* Per-person shares in the expense's own currency. Equal split hands leftover minor units to the first people. */
 function sharesOf(e) {
@@ -744,7 +750,7 @@ function render() {
   const base = state.trip.base;
   $('#hdrName').textContent = state.trip.name || '旅行';
   $('#hdrDate').textContent = state.trip.startDate ? state.trip.startDate.replace(/-/g, '/') + ' 出発' : '';
-  const total = state.expenses.reduce((s, e) => s + toBase(e.amount, e.currency), 0);
+  const total = state.expenses.reduce((s, e) => s + toBase(effAmount(e), e.currency), 0);
   $('#hdrTotal').textContent = fmt(roundTo(total, base), base);
 
   const tabs = $('#tabs');
@@ -774,7 +780,7 @@ function render() {
 function renderCategory(cat) {
   const base = state.trip.base;
   const items = state.expenses.filter(e => e.cat === cat.id).sort((a, b) => b.createdAt - a.createdAt);
-  const sub = items.reduce((s, e) => s + toBase(e.amount, e.currency), 0);
+  const sub = items.reduce((s, e) => s + toBase(effAmount(e), e.currency), 0);
   let h = `<div class="section-head"><h2>${cat.label} · ${items.length}件</h2><span class="num">${fmt(roundTo(sub, base), base)}</span></div>`;
   if (!items.length) {
     return h + `<div class="empty"><strong>${cat.label}の費用はまだありません</strong>右下の「${cat.label}を追加」から入力できます。</div>`;
@@ -785,11 +791,11 @@ function renderCategory(cat) {
     const n = Object.keys(shares).length;
     const splitTxt = n === 0 ? '割り勘なし' : e.mode === 'equal' ? `${n}人で均等` : `${n}人で個別`;
     const noRate = !rateOf(e.currency);
-    h += `<button class="item" type="button" data-edit="${e.id}">
-      <span class="name"><span class="cat-dot"></span>${esc(e.name)}</span>
-      <span class="amt num">${fmt(e.amount, e.currency)}</span>
-      <span class="meta">${esc(memberName(e.payer))}が支払い · ${splitTxt}</span>
-      <span class="base num">${e.currency === base ? '' : noRate ? '<span class="minus">レート未設定</span>' : '≈ ' + fmt(roundTo(toBase(e.amount, e.currency), base), base)}</span>
+    h += `<button class="item${e.cancelled ? ' cancelled' : ''}" type="button" data-edit="${e.id}">
+      <span class="name"><span class="cat-dot"></span>${esc(e.name)}${e.cancelled ? '<span class="tag-cancel">キャンセル</span>' : ''}</span>
+      <span class="amt num">${e.cancelled ? `<span class="was">${fmt(e.amount, e.currency)}</span>` : ''}${fmt(effAmount(e), e.currency)}</span>
+      <span class="meta">${esc(memberName(e.payer))}が支払い · ${splitTxt}${e.cancelled ? ' · キャンセル料' : ''}</span>
+      <span class="base num">${e.currency === base ? '' : noRate ? '<span class="minus">レート未設定</span>' : '≈ ' + fmt(roundTo(toBase(effAmount(e), e.currency), base), base)}</span>
     </button>`;
   }
   return h + '</div>';
@@ -798,7 +804,7 @@ function renderCategory(cat) {
 /* An expense's value in the settlement currency, split so the per-person parts add up exactly (largest remainder). */
 function baseSplit(e) {
   const f = 10 ** digits(state.trip.base);
-  const total = Math.round(toBase(e.amount, e.currency) * f);
+  const total = Math.round(toBase(effAmount(e), e.currency) * f);
   const shares = sharesOf(e);
   const ids = Object.keys(shares);
   const w = ids.reduce((s, id) => s + shares[id], 0);
@@ -874,7 +880,7 @@ function renderSettle() {
   }
   h += `</div>`;
 
-  const totals = CATS.map(c => ({ c, v: state.expenses.filter(e => e.cat === c.id).reduce((s, e) => s + toBase(e.amount, e.currency), 0) }));
+  const totals = CATS.map(c => ({ c, v: state.expenses.filter(e => e.cat === c.id).reduce((s, e) => s + toBase(effAmount(e), e.currency), 0) }));
   const all = totals.reduce((s, t) => s + t.v, 0);
   h += `<div class="card"><h3>カテゴリ別</h3>`;
   if (all > 0) h += `<div class="catbar">${totals.filter(t => t.v > 0).map(t => `<span style="--cat: var(${t.c.color}); width:${(t.v / all * 100).toFixed(2)}%"></span>`).join('')}</div>`;
@@ -974,6 +980,8 @@ function openExpense(cat, id) {
     payer: state.members[0]?.id || '', mode: 'equal', participants: state.members.map(m => m.id), shares: {},
   };
   draft.amountText = src ? String(src.amount) : '';
+  draft.cancelled = !!(src && src.cancelled);
+  draft.cancelFeeText = src && src.cancelled ? String(src.cancelFee || 0) : '';
   draft.shareText = {};
   if (draft.mode === 'custom') for (const k in draft.shares) draft.shareText[k] = String(draft.shares[k]);
   const c = CATS.find(c => c.id === draft.cat);
@@ -1013,6 +1021,14 @@ function renderExpenseForm() {
         <div class="share-list" id="shareList"></div>
       </div>
       <div class="share-sum" id="shareSum"></div>
+    </div>
+    <div class="field">
+      <label class="switch"><input type="checkbox" id="fCancel" ${d.cancelled ? 'checked' : ''}>キャンセルした</label>
+      <div class="cancel-box" id="cancelBox" ${d.cancelled ? '' : 'hidden'}>
+        <div class="field" style="margin-bottom:6px"><label for="fCancelFee">キャンセル料 (返金されなかった金額)</label>
+          <div class="row" style="align-items:center"><input class="input num grow" id="fCancelFee" inputmode="decimal" value="${esc(d.cancelFeeText)}" placeholder="0" autocomplete="off"><span class="hint" id="fCancelCur">${esc(d.currency)}</span></div></div>
+        <div class="hint" id="fCancelHint"></div>
+      </div>
     </div>
     <div class="err" id="fErr"></div>`;
   $('#sheetFoot').innerHTML = `
@@ -1054,6 +1070,14 @@ function setParticipantsAll(on) {
 
 function updateSum() {
   const d = draft;
+  const ch = $('#fCancelHint');
+  if (ch) {
+    $('#fCancelCur').textContent = d.currency;
+    const fee = parseNum(d.cancelFeeText || '0');
+    const a = parseNum(d.amountText);
+    ch.textContent = !isFinite(fee) ? '' : fee === 0 ? '全額返金: 精算には含めません。' :
+      `精算ではキャンセル料 ${fmt(fee, d.currency)} を上の割り勘と同じ割合で分けます。${isFinite(a) && a > fee ? `返金 ${fmt(roundTo(a - fee, d.currency), d.currency)}` : ''}`;
+  }
   const amt = parseNum(d.amountText);
   const hint = $('#fBaseHint');
   if (hint) {
@@ -1100,6 +1124,12 @@ function saveExpense() {
       out.shares[id] = roundTo(v, d.currency); sum += out.shares[id];
     }
     if (roundTo(sum, d.currency) !== out.amount) { err.textContent = '個人の金額の合計が金額と一致していません。'; return; }
+  }
+  if (d.cancelled) {
+    const fee = d.cancelFeeText.trim() === '' ? 0 : parseNum(d.cancelFeeText);
+    if (!isFinite(fee) || fee < 0) { err.textContent = 'キャンセル料を正しく入力してください (なければ 0)。'; $('#fCancelFee').focus(); return; }
+    if (fee > out.amount) { err.textContent = 'キャンセル料が金額より大きくなっています。'; $('#fCancelFee').focus(); return; }
+    out.cancelled = true; out.cancelFee = roundTo(fee, d.currency);
   }
   const i = state.expenses.findIndex(e => e.id === out.id);
   if (i >= 0) state.expenses[i] = out; else state.expenses.push(out);
@@ -1234,6 +1264,7 @@ document.addEventListener('input', ev => {
   if (draft) {
     if (t.id === 'fName') { draft.name = t.value; return; }
     if (t.id === 'fAmount') { draft.amountText = t.value; refreshEqualValues(); updateSum(); return; }
+    if (t.id === 'fCancelFee') { draft.cancelFeeText = t.value; updateSum(); return; }
     if (t.dataset.share) { draft.shareText[t.dataset.share] = t.value; updateSum(); return; }
   }
   if (t.id === 'setName') { state.trip.name = t.value; state.sample = false; save(); $('#hdrName').textContent = t.value || '旅行'; return; }
@@ -1242,7 +1273,7 @@ document.addEventListener('input', ev => {
     if (t.value.trim() === '') delete state.rates[t.dataset.rate]; else if (isFinite(v) && v > 0) state.rates[t.dataset.rate] = v;
     state.sample = false; save();
     const base = state.trip.base;
-    $('#hdrTotal').textContent = fmt(roundTo(state.expenses.reduce((s, e) => s + toBase(e.amount, e.currency), 0), base), base);
+    $('#hdrTotal').textContent = fmt(roundTo(state.expenses.reduce((s, e) => s + toBase(effAmount(e), e.currency), 0), base), base);
     return;
   }
   if (t.dataset.mem) { const m = state.members.find(m => m.id === t.dataset.mem); if (m) { m.name = t.value; save(); } return; }
@@ -1253,6 +1284,7 @@ document.addEventListener('change', ev => {
   if (draft) {
     if (t.id === 'fCur') { draft.currency = t.value; refreshEqualValues(); updateSum(); return; }
     if (t.id === 'fSplit') { setParticipantsAll(t.checked); return; }
+    if (t.id === 'fCancel') { draft.cancelled = t.checked; $('#cancelBox').hidden = !t.checked; if (t.checked) setTimeout(() => $('#fCancelFee').focus(), 0); updateSum(); return; }
     if (t.dataset.part) {
       const id = t.dataset.part;
       if (t.checked) { if (!draft.participants.includes(id)) draft.participants.push(id); }
