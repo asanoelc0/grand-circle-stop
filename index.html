@@ -138,6 +138,9 @@ main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scr
 }
 .item:active { transform: scale(.99); }
 .item .name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.item .note { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.picks .chip { padding: 4px 10px; font-size: 13px; }
 .item .amt { font-weight: 600; text-align: right; }
 .item .meta { font-size: 12px; color: var(--muted); min-width: 0; }
 .item .base { font-size: 12px; color: var(--muted); text-align: right; }
@@ -334,12 +337,16 @@ const STORAGE_KEY = 'travel-ledger-v1';
 
 const CATS = [
   { id: 'hotel', label: 'ホテル', color: '--c-hotel',
+    note: { label: '場所', ph: '例: ワイキキ、空港近く', picks: [] },
     icon: '<path d="M3 20V6M3 14h18v6M21 14v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="11" r="2"/>' },
   { id: 'tour', label: 'ツアー', color: '--c-tour',
+    note: { label: '内容・集合場所', ph: '例: ハナウマ湾 9:00 ホテル前集合', picks: [] },
     icon: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>' },
   { id: 'move', label: '移動', color: '--c-move',
+    note: { label: '手段', ph: '例: 飛行機 JL782 羽田→ホノルル', picks: ['飛行機', '電車', 'バス', 'タクシー', 'レンタカー', '船'] },
     icon: '<path d="M2 16l20-8-8 12-2-5-5-1z"/>' },
   { id: 'local', label: '現地', color: '--c-local',
+    note: { label: '食事場所・お土産など', ph: '例: ステーキハウス、マカダミアナッツ', picks: ['食事', 'お土産', '買い物', '入場料', 'チップ'] },
     icon: '<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>' },
 ];
 const VIEWS = [
@@ -364,10 +371,10 @@ function sampleState() {
     rates: { USD: 148.5 },
     rateNote: 'サンプルのレートです',
     expenses: [
-      { id: uid(), cat: 'hotel', name: 'ワイキキのホテル 4泊', amount: 1680, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 1 },
-      { id: uid(), cat: 'move', name: '羽田⇄ホノルル 航空券', amount: 396000, currency: 'JPY', payer: b, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 2 },
+      { id: uid(), cat: 'hotel', name: 'ワイキキのホテル 4泊', note: 'ワイキキ・カラカウア通り', amount: 1680, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 1 },
+      { id: uid(), cat: 'move', name: '羽田⇄ホノルル 航空券', note: '飛行機 JL782 / JL781', amount: 396000, currency: 'JPY', payer: b, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 2 },
       { id: uid(), cat: 'tour', name: 'シュノーケルツアー', amount: 390, currency: 'USD', payer: c, mode: 'custom', participants: [a, c], shares: { [a]: 195, [c]: 195 }, createdAt: 3 },
-      { id: uid(), cat: 'local', name: '夕食 (ステーキ)', amount: 214.6, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 4 },
+      { id: uid(), cat: 'local', name: '夕食 (ステーキ)', note: '食事 ルースズ・クリス', amount: 214.6, currency: 'USD', payer: a, mode: 'equal', participants: [a, b, c], shares: {}, createdAt: 4 },
     ],
   };
 }
@@ -792,7 +799,7 @@ function renderCategory(cat) {
     const splitTxt = n === 0 ? '割り勘なし' : e.mode === 'equal' ? `${n}人で均等` : `${n}人で個別`;
     const noRate = !rateOf(e.currency);
     h += `<button class="item${e.cancelled ? ' cancelled' : ''}" type="button" data-edit="${e.id}">
-      <span class="name"><span class="cat-dot"></span>${esc(e.name)}${e.cancelled ? '<span class="tag-cancel">キャンセル</span>' : ''}</span>
+      <span class="name"><span class="cat-dot"></span>${esc(e.name)}${e.cancelled ? '<span class="tag-cancel">キャンセル</span>' : ''}${e.note ? `<span class="note">${esc(e.note)}</span>` : ''}</span>
       <span class="amt num">${e.cancelled ? `<span class="was">${fmt(e.amount, e.currency)}</span>` : ''}${fmt(effAmount(e), e.currency)}</span>
       <span class="meta">${esc(memberName(e.payer))}が支払い · ${splitTxt}${e.cancelled ? ' · キャンセル料' : ''}</span>
       <span class="base num">${e.currency === base ? '' : noRate ? '<span class="minus">レート未設定</span>' : '≈ ' + fmt(roundTo(toBase(effAmount(e), e.currency), base), base)}</span>
@@ -980,6 +987,7 @@ function openExpense(cat, id) {
     payer: state.members[0]?.id || '', mode: 'equal', participants: state.members.map(m => m.id), shares: {},
   };
   draft.amountText = src ? String(src.amount) : '';
+  draft.note = (src && src.note) || '';
   draft.cancelled = !!(src && src.cancelled);
   draft.cancelFeeText = src && src.cancelled ? String(src.cancelFee || 0) : '';
   draft.shareText = {};
@@ -1007,6 +1015,7 @@ function renderExpenseForm() {
     <div class="hint" id="fBaseHint" style="margin:-6px 0 12px"></div>
     <div class="field"><span class="lbl">分類</span>
       <div class="chips">${CATS.map(c => `<button type="button" class="chip" data-fcat="${c.id}" aria-pressed="${c.id === d.cat}" style="--cat: var(${c.color})">${c.label}</button>`).join('')}</div></div>
+    <div class="field" id="noteField"></div>
     <div class="field"><span class="lbl">支払い者</span>
       <div class="chips">${state.members.map(m => `<button type="button" class="chip" data-payer="${m.id}" aria-pressed="${m.id === d.payer}">${esc(m.name)}</button>`).join('') || '<span class="hint">設定でメンバーを追加してください</span>'}</div></div>
     <div class="field">
@@ -1034,7 +1043,16 @@ function renderExpenseForm() {
   $('#sheetFoot').innerHTML = `
     ${d.id ? `<button class="btn danger" type="button" data-act="del-exp" id="delBtn">削除</button>` : ''}
     <button class="btn primary" type="button" data-act="save-exp">${d.id ? '保存' : '追加する'}</button>`;
+  renderNoteField();
   renderShares();
+}
+
+/* Free-text detail whose label follows the category (場所 / 手段 / 食事場所・お土産…). */
+function renderNoteField() {
+  const n = CATS.find(c => c.id === draft.cat).note;
+  $('#noteField').innerHTML = `<label for="fNote">${n.label}</label>
+    <input class="input" id="fNote" value="${esc(draft.note)}" placeholder="${esc(n.ph)}" autocomplete="off">
+    ${n.picks.length ? `<div class="picks">${n.picks.map(p => `<button type="button" class="chip" data-pick="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : ''}`;
 }
 
 function renderShares() {
@@ -1114,7 +1132,7 @@ function saveExpense() {
   if (!isFinite(amt) || amt <= 0) { err.textContent = '金額を正しく入力してください。'; $('#fAmount').focus(); return; }
   if (!d.payer) { err.textContent = '支払い者を選んでください。'; return; }
   const out = { id: d.id || uid(), cat: d.cat, name: d.name.trim(), amount: roundTo(amt, d.currency), currency: d.currency,
-    payer: d.payer, mode: d.mode, participants: state.members.map(m => m.id).filter(id => d.participants.includes(id)), shares: {},
+    note: d.note.trim(), payer: d.payer, mode: d.mode, participants: state.members.map(m => m.id).filter(id => d.participants.includes(id)), shares: {},
     createdAt: d.createdAt || Date.now() };
   if (d.mode === 'custom') {
     let sum = 0;
@@ -1189,7 +1207,12 @@ document.addEventListener('click', ev => {
   if (t.id === 'quickSave') return saveToFile(false);
 
   if (draft) {
-    if (t.dataset.fcat) { draft.cat = t.dataset.fcat; const c = CATS.find(c => c.id === draft.cat); $('#sheet').style.setProperty('--cat', `var(${c.color})`); document.querySelectorAll('[data-fcat]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+    if (t.dataset.pick) {
+      const v = t.dataset.pick, cur = draft.note.trim();
+      draft.note = cur ? (cur.split(/\s+/).includes(v) ? cur : `${v} ${cur}`) : v;
+      const i = $('#fNote'); i.value = draft.note; i.focus(); i.setSelectionRange(draft.note.length, draft.note.length); return;
+    }
+    if (t.dataset.fcat) { draft.cat = t.dataset.fcat; renderNoteField(); const c = CATS.find(c => c.id === draft.cat); $('#sheet').style.setProperty('--cat', `var(${c.color})`); document.querySelectorAll('[data-fcat]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
     if (t.dataset.payer) { draft.payer = t.dataset.payer; document.querySelectorAll('[data-payer]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
     if (t.dataset.mode) {
       if (t.dataset.mode === 'custom' && draft.mode === 'equal') {
@@ -1263,6 +1286,7 @@ document.addEventListener('input', ev => {
   const t = ev.target;
   if (draft) {
     if (t.id === 'fName') { draft.name = t.value; return; }
+    if (t.id === 'fNote') { draft.note = t.value; return; }
     if (t.id === 'fAmount') { draft.amountText = t.value; refreshEqualValues(); updateSum(); return; }
     if (t.id === 'fCancelFee') { draft.cancelFeeText = t.value; updateSum(); return; }
     if (t.dataset.share) { draft.shareText[t.dataset.share] = t.value; updateSum(); return; }
