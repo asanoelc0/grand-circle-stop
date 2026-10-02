@@ -137,14 +137,24 @@ main { flex: 1; overflow-y: auto; padding: 14px 16px 110px; -webkit-overflow-scr
   padding: 12px 14px;
 }
 .item:active { transform: scale(.99); }
-.row-item { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; }
+.row-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.movers { display: flex; flex-direction: column; gap: 4px; }
+.movers button {
+  width: 36px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  display: grid; place-items: center; cursor: pointer; padding: 0; color: var(--ink);
+}
+.movers button:disabled { opacity: .3; cursor: default; }
+.movers svg { width: 16px; height: 16px; }
+.sortbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: -4px 2px 10px; }
+.sortbar label { font-size: 12px; color: var(--muted); }
+.sortbar select { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 14px; }
+.tag-ok { display: inline-block; font-size: 11px; font-weight: 700; color: var(--good); border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; margin-left: 6px; vertical-align: 2px; }
 .check {
   width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface);
   display: grid; place-items: center; cursor: pointer; padding: 0; color: transparent; flex: none;
 }
 .check svg { width: 18px; height: 18px; }
 .check[aria-pressed="true"] { background: var(--good); border-color: var(--good); color: var(--surface); }
-.row-item.done .item { background: var(--bg); }
 .done-count { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 6px; letter-spacing: 0; }
 .item .name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .item .note { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 1px; }
@@ -434,6 +444,12 @@ function save(opts) {
 }
 
 let state = load();
+const SORTS = [
+  ['new', '新しい順'], ['old', '古い順'], ['amtDesc', '金額が高い順'], ['amtAsc', '金額が安い順'],
+  ['name', '名前順'], ['unchecked', '未確認を先に'], ['manual', '手動 (▲▼で移動)'],
+];
+let sortMode = (() => { try { return localStorage.getItem(STORAGE_KEY + ':sort') || 'new'; } catch (e) { return 'new'; } })();
+if (!SORTS.some(s => s[0] === sortMode)) sortMode = 'new';
 let view = (() => { try { return localStorage.getItem(STORAGE_KEY + ':view') || 'hotel'; } catch (e) { return 'hotel'; } })();
 if (!VIEWS.some(v => v.id === view)) view = 'hotel';
 
@@ -801,28 +817,61 @@ function render() {
 
 function renderCategory(cat) {
   const base = state.trip.base;
-  const items = state.expenses.filter(e => e.cat === cat.id).sort((a, b) => b.createdAt - a.createdAt);
+  const items = sortedItems(cat.id);
   const sub = items.reduce((s, e) => s + toBase(effAmount(e), e.currency), 0);
   let h = `<div class="section-head"><h2>${cat.label} · ${items.length}件${items.length ? `<span class="done-count">確認済み ${items.filter(e => e.checked).length}/${items.length}</span>` : ''}</h2><span class="num">${fmt(roundTo(sub, base), base)}</span></div>`;
   if (!items.length) {
     return h + `<div class="empty"><strong>${cat.label}の費用はまだありません</strong>右下の「${cat.label}を追加」から入力できます。</div>`;
   }
+  h += `<div class="sortbar"><label for="sortSel">並び順</label>
+    <select id="sortSel">${SORTS.map(([k, l]) => `<option value="${k}" ${k === sortMode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
   h += '<div class="list">';
-  for (const e of items) {
+  const manual = sortMode === 'manual';
+  for (const [idx, e] of items.entries()) {
     const shares = sharesOf(e);
     const n = Object.keys(shares).length;
     const splitTxt = n === 0 ? '割り勘なし' : e.mode === 'equal' ? `${n}人で均等` : `${n}人で個別`;
     const noRate = !rateOf(e.currency);
-    h += `<div class="row-item${e.checked ? ' done' : ''}">
-      <button class="check" type="button" data-check="${e.id}" aria-pressed="${!!e.checked}" aria-label="${esc(e.name)} を確認済みにする"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    h += `<div class="${manual ? 'row-item' : ''}">
       <button class="item${e.cancelled ? ' cancelled' : ''}" type="button" data-edit="${e.id}">
-      <span class="name"><span class="cat-dot"></span>${esc(e.name)}${e.cancelled ? '<span class="tag-cancel">キャンセル</span>' : ''}${e.note ? `<span class="note">${esc(e.note)}</span>` : ''}</span>
+      <span class="name"><span class="cat-dot"></span>${esc(e.name)}${e.cancelled ? '<span class="tag-cancel">キャンセル</span>' : ''}${e.checked ? '<span class="tag-ok">✓ 確認済み</span>' : ''}${e.note ? `<span class="note">${esc(e.note)}</span>` : ''}</span>
       <span class="amt num">${e.cancelled ? `<span class="was">${fmt(e.amount, e.currency)}</span>` : ''}${fmt(effAmount(e), e.currency)}</span>
       <span class="meta">${esc(memberName(e.payer))}が支払い · ${splitTxt}${e.cancelled ? ' · キャンセル料' : ''}</span>
       <span class="base num">${e.currency === base ? '' : noRate ? '<span class="minus">レート未設定</span>' : '≈ ' + fmt(roundTo(toBase(effAmount(e), e.currency), base), base)}</span>
-    </button></div>`;
+    </button>${manual ? `<div class="movers">
+      <button type="button" data-move="${e.id}" data-dir="-1" ${idx === 0 ? 'disabled' : ''} aria-label="${esc(e.name)} を上へ">${svg('<path d="M6 15l6-6 6 6"/>')}</button>
+      <button type="button" data-move="${e.id}" data-dir="1" ${idx === items.length - 1 ? 'disabled' : ''} aria-label="${esc(e.name)} を下へ">${svg('<path d="M6 9l6 6 6-6"/>')}</button>
+    </div>` : ''}</div>`;
   }
   return h + '</div>';
+}
+
+const orderOf = e => e.order ?? e.createdAt;
+function sortedItems(cat) {
+  const items = state.expenses.filter(e => e.cat === cat);
+  const baseOf = e => toBase(effAmount(e), e.currency);
+  const cmp = {
+    new: (a, b) => b.createdAt - a.createdAt,
+    old: (a, b) => a.createdAt - b.createdAt,
+    amtDesc: (a, b) => baseOf(b) - baseOf(a),
+    amtAsc: (a, b) => baseOf(a) - baseOf(b),
+    name: (a, b) => a.name.localeCompare(b.name, 'ja'),
+    unchecked: (a, b) => (!!a.checked - !!b.checked) || b.createdAt - a.createdAt,
+    manual: (a, b) => orderOf(a) - orderOf(b),
+  }[sortMode];
+  return items.sort(cmp);
+}
+
+/* Manual order: renumber this category in its current order, then swap with the neighbour. */
+function moveItem(id, dir) {
+  const e = state.expenses.find(e => e.id === id);
+  if (!e) return;
+  const list = sortedItems(e.cat);
+  list.forEach((x, i) => x.order = i);
+  const i = list.indexOf(e), j = i + dir;
+  if (j < 0 || j >= list.length) return;
+  [list[i].order, list[j].order] = [list[j].order, list[i].order];
+  save(); render();
 }
 
 /* An expense's value in the settlement currency, split so the per-person parts add up exactly (largest remainder). */
@@ -1006,7 +1055,7 @@ function openExpense(cat, id) {
   const lastCur = (() => { const l = [...state.expenses].sort((a, b) => b.createdAt - a.createdAt)[0]; return l ? l.currency : state.currencies.find(c => c !== state.trip.base) || state.trip.base; })();
   draft = src ? JSON.parse(JSON.stringify(src)) : {
     id: null, cat, name: '', amount: 0, currency: state.currencies.includes(lastCur) ? lastCur : state.trip.base,
-    payer: state.members[0]?.id || '', mode: 'equal', participants: state.members.map(m => m.id), shares: {},
+    payer: state.members[0]?.id || '', mode: 'equal', participants: [], shares: {}, checked: false,
   };
   draft.amountText = src ? String(src.amount) : '';
   draft.note = (src && src.note) || '';
@@ -1060,6 +1109,10 @@ function renderExpenseForm() {
           <div class="row" style="align-items:center"><input class="input num grow" id="fCancelFee" inputmode="decimal" value="${esc(d.cancelFeeText)}" placeholder="0" autocomplete="off"><span class="hint" id="fCancelCur">${esc(d.currency)}</span></div></div>
         <div class="hint" id="fCancelHint"></div>
       </div>
+    </div>
+    <div class="field">
+      <label class="switch"><input type="checkbox" id="fChecked" ${d.checked ? 'checked' : ''}>確認済み</label>
+      <span class="hint">支払いや明細を確かめたらオンにします。</span>
     </div>
     <div class="err" id="fErr"></div>`;
   $('#sheetFoot').innerHTML = `
@@ -1155,7 +1208,7 @@ function saveExpense() {
   if (!d.payer) { err.textContent = '支払い者を選んでください。'; return; }
   const out = { id: d.id || uid(), cat: d.cat, name: d.name.trim(), amount: roundTo(amt, d.currency), currency: d.currency,
     note: d.note.trim(), checked: !!d.checked, payer: d.payer, mode: d.mode, participants: state.members.map(m => m.id).filter(id => d.participants.includes(id)), shares: {},
-    createdAt: d.createdAt || Date.now() };
+    createdAt: d.createdAt || Date.now(), order: d.order ?? Date.now() };
   if (d.mode === 'custom') {
     let sum = 0;
     for (const id of out.participants) {
@@ -1224,11 +1277,7 @@ document.addEventListener('click', ev => {
   if (t.dataset.viewGo) return setView(t.dataset.viewGo);
   if (t.id === 'fab') return openExpense(view);
   if (t.dataset.edit) return openExpense(null, t.dataset.edit);
-  if (t.dataset.check) {
-    const e = state.expenses.find(e => e.id === t.dataset.check);
-    if (e) { e.checked = !e.checked; save(); render(); toast(e.checked ? `${e.name} を確認済みにしました` : '確認済みを外しました'); }
-    return;
-  }
+  if (t.dataset.move) { moveItem(t.dataset.move, Number(t.dataset.dir)); return; }
   if (t.dataset.settle) {
     const k = t.dataset.settle;
     if (state.settled[k]) delete state.settled[k]; else state.settled[k] = true;
@@ -1340,6 +1389,7 @@ document.addEventListener('change', ev => {
   if (draft) {
     if (t.id === 'fCur') { draft.currency = t.value; refreshEqualValues(); updateSum(); return; }
     if (t.id === 'fSplit') { setParticipantsAll(t.checked); return; }
+    if (t.id === 'fChecked') { draft.checked = t.checked; return; }
     if (t.id === 'fCancel') { draft.cancelled = t.checked; $('#cancelBox').hidden = !t.checked; if (t.checked) setTimeout(() => $('#fCancelFee').focus(), 0); updateSum(); return; }
     if (t.dataset.part) {
       const id = t.dataset.part;
@@ -1347,6 +1397,11 @@ document.addEventListener('change', ev => {
       else draft.participants = draft.participants.filter(x => x !== id);
       renderShares(); return;
     }
+  }
+  if (t.id === 'sortSel') {
+    sortMode = t.value;
+    try { localStorage.setItem(STORAGE_KEY + ':sort', sortMode); } catch (e) {}
+    render(); return;
   }
   if (t.id === 'setDate') { state.trip.startDate = t.value; state.sample = false; save(); render(); toast('開始日を変更しました。必要ならレートを取得し直してください'); return; }
   if (t.id === 'setBase') {
